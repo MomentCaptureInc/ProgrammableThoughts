@@ -211,7 +211,9 @@ function speechToText(file) {
     "config": {
         "encoding":"MP3",
         "sampleRateHertz": 44100,
-        "languageCode": "en-US"
+        "languageCode": "en-US",
+        "enableAutomaticPunctuation": true,
+        "model": "default"
     },
     "audio": {
         "content": Utilities.base64Encode(file.getBlob().getBytes())
