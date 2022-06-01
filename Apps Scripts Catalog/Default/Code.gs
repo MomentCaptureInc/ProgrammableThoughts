@@ -43,7 +43,6 @@ function initialize() {
         DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(scriptFile);
       }
     }    
-    // TEMP - https://github.com/Elringus/UnityGoogleDrive/issues/99
 
     ScriptApp.newTrigger('rollingProcess')
       .timeBased()
@@ -68,17 +67,6 @@ function rollingProcess() {
     Logger.log(error);
   }
 }
-
-// function onOpen() {
-//   if (!processedFolderID && !docFolderID) {
-//     SpreadsheetApp.getUi()
-//       .createMenu('Authorization')
-//       .addItem('Step 1', 'initialize')
-//       .addItem('Step 2', 'initialize')
-//       .addToUi();
-//     SpreadsheetApp.getUi().alert('There are two required steps for authorization currently. In the top menu, under the "Authorization" dropdown, go through both steps to complete the authorization flow.');
-//   }
-// }
 
 function process() {
   try {
