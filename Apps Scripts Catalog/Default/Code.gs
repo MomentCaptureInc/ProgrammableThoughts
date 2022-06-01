@@ -76,7 +76,7 @@ function process() {
     const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
     var pizza = false;
     const textArray = [];
-    const blobArray = [];
+    // const blobArray = [];
     const thoughts = getAllThoughts();
     var thoughtDateCreatedDateObject
     if (thoughts && thoughts.length > 0) {
@@ -88,13 +88,28 @@ function process() {
         var actionMessage;  
         Logger.log("name: " + thought.getName() + " dateCreated: " + thoughtDateCreated);
         const text = speechToText(thought);
+        if (!text) {
+          Logger.log("Empty audio file, more acurately, no text could be transcribed");
+          DriveApp.getFolderById(processedFolderID).addFile(thought);
+          DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
+          const data = [
+            thought.getId(),
+            thought.getName(),
+            thoughtDateCreated,
+            "https://drive.google.com/file/d/" + thought.getId() + "/view",
+            "",
+            ""
+          ];
+          insertRow(thoughtMasterSheet, data, 2)
+          break;
+        }
         if (todoistTestKey && todoistProjectID) actionMessage = actions(text);
         const doc = DocumentApp.create(thought.getName());
         doc.getBody().setText(text);
         const audioLink = "<a href=" + "'https://drive.google.com/file/d/" + thought.getId() + "/view'" + ">audio</a>";
         const docLink = "<a href=" + "'https://drive.google.com/file/d/" + doc.getId() + "'>doc</a>" // "https://docs.google.com/document/d/" + doc.getId();
         textArray.push(text + " - " + audioLink + " / " + docLink + " >> " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=favorite" + "'>favorite</a>" + " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=trash" + "'>trash</a>" + (todoistTestKey && todoistProjectID ? " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=task" + "'>task</a>" : ""));
-        blobArray.push(thought.getBlob());
+        // blobArray.push(thought.getBlob());
         const data = [
           thought.getId(),
           thought.getName(),
@@ -111,7 +126,7 @@ function process() {
         if (text.toLowerCase().includes("pizza")) pizza = true;
         Logger.log("Thought " + (i + 1) + " processed");
       }
-      textArray.reverse();
+      if (textArray && textArray.length > 0) textArray.reverse();
       if (pizza) {
         Logger.log("pizza");
         const body = "pizza pizza";
@@ -119,7 +134,7 @@ function process() {
         GmailApp.sendEmail(Session.getActiveUser().getEmail(), "Pizza Pizza", body, {
           htmlBody: htmlBody
         });
-      } else {
+      } else if (textArray && textArray.length > 0) {
         var body;
         var htmlBody;
         const tailMessage = "";
@@ -212,7 +227,7 @@ function speechToText(file) {
   const response = UrlFetchApp.fetch(url, options);
   const obj = JSON.parse(response.getContentText());
   const results = obj.results;
-  if (!results) return "Empty"; 
+  if (!results) return; 
   for (var i = 0; i < results.length; i++) {
     for (var j = 0; j < results[i].alternatives.length; j++) {
       const transcript = obj.results[i].alternatives[j].transcript;
