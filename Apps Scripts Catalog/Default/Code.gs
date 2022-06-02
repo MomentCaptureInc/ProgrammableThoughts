@@ -101,7 +101,7 @@ function process() {
             ""
           ];
           insertRow(thoughtMasterSheet, data, 2)
-          break;
+          continue;
         }
         if (todoistTestKey && todoistProjectID) actionMessage = actions(text);
         const doc = DocumentApp.create(thought.getName());
