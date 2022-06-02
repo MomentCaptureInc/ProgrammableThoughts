@@ -108,7 +108,7 @@ function process() {
         doc.getBody().setText(text);
         const audioLink = "<a href=" + "'https://drive.google.com/file/d/" + thought.getId() + "/view'" + ">audio</a>";
         const docLink = "<a href=" + "'https://drive.google.com/file/d/" + doc.getId() + "'>doc</a>" // "https://docs.google.com/document/d/" + doc.getId();
-        textArray.push(text + " - " + audioLink + " / " + docLink + " >> " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=favorite" + "'>favorite</a>" + " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=trash" + "'>trash</a>" + (todoistTestKey && todoistProjectID ? " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=task" + "'>task</a>" : ""));
+        textArray.push(text + "   " + audioLink + " / " + docLink + (publishedUrl ? " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=favorite" + "'>favorite</a>" + " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=trash" + "'>trash</a>" : "") + (todoistTestKey && todoistProjectID ? " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=task" + "'>task</a>" : ""));
         // blobArray.push(thought.getBlob());
         const data = [
           thought.getId(),
