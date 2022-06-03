@@ -1,4 +1,4 @@
-const apiKey = "AIzaSyBB4OkM1kBm-3QVomFvVyP-SRfJJECEBRM"; // OPTIONAL - REPLACE WITH YOUR OWN GOOGLE SPEECH TO TEXT API KEY. THE EXISTING KEY BELONGS TO PROGRAMMABLE THOUGHTS AND CAN BE USED IN YOUR PERSONAL SCRIPT. BUT IF YOU'RE GOING TO BE TRANSCRIBING A LOT OF AUDIO, YOU WOULD BE BETTER OFF CREATING YOUR OWN API KEY.
+const googleCloudSpeechToTextAPIKey = "AIzaSyDXgPaIIbqpYeNSMlVH5g8oKddHWGH2fSo"; // OPTIONAL - REPLACE WITH YOUR OWN GOOGLE SPEECH TO TEXT API KEY. THE EXISTING KEY BELONGS TO PROGRAMMABLE THOUGHTS AND CAN BE USED IN YOUR PERSONAL SCRIPT. BUT IF YOU'RE GOING TO BE TRANSCRIBING A LOT OF AUDIO, YOU WOULD BE BETTER OFF CREATING YOUR OWN API KEY.
 const todoistTestKey = ""; // OPTIONAL - REPLACE WITH YOUR OWN TODOSIT TEST API KEY
 const todoistProjectID = ""; // OPTIONAL - REPLACE WITH YOUR OWN TODOSIT PROJECT ID
 /////////////////////////////////////
@@ -219,7 +219,7 @@ function speechToText(file) {
         "content": Utilities.base64Encode(file.getBlob().getBytes())
     }
   };
-  const url = speechUrl + "speech:recognize?key=" + apiKey;
+  const url = speechUrl + "speech:recognize?key=" + googleCloudSpeechToTextAPIKey;
   var options = {
     'method' : 'post',
     'muteHttpExceptions': false,
