@@ -57,7 +57,8 @@ function initialize() {
       "Doc",
       "Favorite"
     ]]);
-
+    const now = new Date();
+    scriptProperties.setProperty("processRunning", "false" + ":" + now.getTime().toString());
     scriptProperties.setProperty("masterSheetID", masterSheet.getId());
     thoughtFolder.addFile(DriveApp.getFileById(masterSheet.getId()));
     DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(masterSheet.getId()));
@@ -65,8 +66,6 @@ function initialize() {
       .timeBased()
       .everyMinutes(1)
       .create();
-    const now = new Date();
-    scriptProperties.setProperty("processRunning", "false" + ":" + now.getTime().toString());
     Logger.log("Initialized");
   } else {
     Logger.log("Already Initialized");
