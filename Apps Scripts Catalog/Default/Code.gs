@@ -1,59 +1,74 @@
-const googleCloudSpeechToTextAPIKey = "AIzaSyDXgPaIIbqpYeNSMlVH5g8oKddHWGH2fSo"; // OPTIONAL - REPLACE WITH YOUR OWN GOOGLE SPEECH TO TEXT API KEY. THE EXISTING KEY BELONGS TO PROGRAMMABLE THOUGHTS AND CAN BE USED IN YOUR PERSONAL SCRIPT. BUT IF YOU'RE GOING TO BE TRANSCRIBING A LOT OF AUDIO, YOU WOULD BE BETTER OFF CREATING YOUR OWN API KEY.
-const todoistTestKey = ""; // OPTIONAL - REPLACE WITH YOUR OWN TODOSIT TEST API KEY
-const todoistProjectID = ""; // OPTIONAL - REPLACE WITH YOUR OWN TODOSIT PROJECT ID
-/////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+// WELCOME TO THE DEFAULT PROGRAMMABLE THOUGHTS GOOGLE APPS SCRIPT //
+/////////////////////////////////////////////////////////////////////
+// IF THIS IS YOUR FIRST TIME HERE, YOU NEED TO RUN THE 'INITIALIZE' FUNCTION. HIT THE 'RUN' BUTTON IN THE TOP MENU AND GO THROUGH THE AUTHORIZATION FLOW.
+// NOTE THAT THESE SOMEWHAT SCARY LOOKING PERMISSIONS ARE ONLY BEING GRANTED TO YOUR OWN PERSONAL ACCOUNT (AND NO ONE ELSE).
+// AFTER THAT, YOU'RE FREE TO TINKER AWAY. BUT IT MIGHT BE A GOOD IDEA TO JUST GET A FEEL FOR THE OPERATIONAL FLOW BEFORE DIGGING INTO CODE MODIFICATIONS.
+
+/////////////////////////
+// OPTIONAL PARAMETERS //
+/////////////////////////
+const googleCloudSpeechToTextAPIKey = "AIzaSyDXgPaIIbqpYeNSMlVH5g8oKddHWGH2fSo"; // REPLACE WITH YOUR OWN GOOGLE SPEECH TO TEXT API KEY. THE EXISTING KEY BELONGS TO PROGRAMMABLE THOUGHTS AND CAN BE USED IN YOUR PERSONAL SCRIPT.
+const todoistTestKey = ""; // REPLACE WITH YOUR OWN TODOSIT TEST API KEY
+const todoistProjectID = ""; // REPLACE WITH YOUR OWN TODOSIT PROJECT ID
+const publishedUrl = ""; // REPLACE WITH DEPLOYED WEB APP URL - ScriptApp.getService().getUrl() broken - https://issuetracker.google.com/issues/170799249
+
 const speechUrl = "https://speech.googleapis.com/v1p1beta1/";
 const scriptProperties = PropertiesService.getScriptProperties();
-/////////////////////////////////////
-const publishedUrl = ""; // OPTIONAL - REPLACE WITH DEPLOYED WEB APP URL - ScriptApp.getService().getUrl() broken - https://issuetracker.google.com/issues/170799249
-/////////////////////////////////////
 const processedFolderID = scriptProperties.getProperty("processedFolderID");
 const docFolderID = scriptProperties.getProperty("docFolderID");
 const thoughtFolderID = scriptProperties.getProperty("thoughtFolderID");
 const masterSheetID = scriptProperties.getProperty("masterSheetID");
-const masterScriptID = scriptProperties.getProperty("masterScriptID");
-/////////////////////////////////////
 
 function initialize() {
-  var message;
-  if (!processedFolderID || !docFolderID || !thoughtFolderID || !masterSheetID || !masterScriptID) {
+  if (!processedFolderID || !docFolderID || !thoughtFolderID || !masterSheetID) {
     Logger.log("Initializing");
+    const scriptFile = DriveApp.getFileById(ScriptApp.getScriptId());
+    scriptFile.setName("Programmable Thoughts Script");
     const foldersArrayIDs = [];
     const folders = DriveApp.getFoldersByName("Programmable Thoughts");
     while (folders.hasNext()) foldersArrayIDs.push(folders.next().getId());
     Logger.log("Folders found: " + foldersArrayIDs.length);
-    const folder = DriveApp.getFolderById(foldersArrayIDs[0]); // HACK - THERE SHOULD ONLY BE 1...NEED TO HANDLE IF THERE ARE MORE
-    const files = folder.getFiles();
-    while (files.hasNext()) {
-      const file = files.next();
-      if (file.getName() == "Programmable Thoughts Data") scriptProperties.setProperty("masterSheetID", file.getId());
-      if (file.getName() == "Programmable Thoughts Script") scriptProperties.setProperty("masterScriptID", file.getId());
-    }
-    scriptProperties.setProperty("thoughtFolderID", folder.getId());
-    scriptProperties.setProperty("processedFolderID", folder.createFolder("Processed").getId());
-    scriptProperties.setProperty("docFolderID", folder.createFolder("Docs").getId());
+    const thoughtFolder = DriveApp.getFolderById(foldersArrayIDs[0]); // HACK - THERE SHOULD ONLY BE 1...NEED TO HANDLE IF THERE ARE MORE
+    thoughtFolder.addFile(scriptFile);
+    DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(scriptFile);
+    scriptProperties.setProperty("thoughtFolderID", thoughtFolder.getId());
+    scriptProperties.setProperty("processedFolderID", thoughtFolder.createFolder("Processed").getId());
+    scriptProperties.setProperty("docFolderID", thoughtFolder.createFolder("Docs").getId());
+    const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 7);
+    const entireSheetRange = masterSheet.getRange("A1:G2");
+    const headerRange = masterSheet.getRange("A1:G1");
+    const transcribedRange = masterSheet.getRange("E1:E");
+    masterSheet.setFrozenRows(1);
+    entireSheetRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    entireSheetRange.setHorizontalAlignment("left");
+    transcribedRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+    transcribedRange.setHorizontalAlignment("center");
+    headerRange.setVerticalAlignment("middle");
+    headerRange.setHorizontalAlignment("center");
+    headerRange.setFontSize("14");
+    headerRange.setFontWeight("bold");
+    headerRange.setValues([[
+      "ID",
+      "Name",
+      "Created Date",
+      "Audio",
+      "Text",
+      "Doc",
+      "Favorite"
+    ]]);
 
-    // TEMP - https://github.com/Elringus/UnityGoogleDrive/issues/99
-    const scriptFiles = DriveApp.getFilesByName("Programmable Thoughts Script");
-    while (scriptFiles.hasNext()) {
-      const scriptFile = scriptFiles.next();
-      if (scriptFile.getName() == "Programmable Thoughts Script") {
-        scriptProperties.setProperty("masterScriptID", scriptFile.getId());
-        DriveApp.getFolderById(folder.getId()).addFile(scriptFile);
-        DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(scriptFile);
-      }
-    }    
-
+    scriptProperties.setProperty("masterSheetID", masterSheet.getId());
+    thoughtFolder.addFile(DriveApp.getFileById(masterSheet.getId()));
+    DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(masterSheet.getId()));
     ScriptApp.newTrigger('rollingProcess')
       .timeBased()
       .everyMinutes(1)
       .create();
-    message = "Initialized";
+    Logger.log("Initialized");
   } else {
-    message = "Already Initialized";
+    Logger.log("Already Initialized");
   }
-  Logger.log(message);
-  return message;
 }
 
 function rollingProcess() {
