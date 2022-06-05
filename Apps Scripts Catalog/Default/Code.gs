@@ -65,6 +65,8 @@ function initialize() {
       .timeBased()
       .everyMinutes(1)
       .create();
+    const now = new Date();
+    scriptProperties.setProperty("processRunning", "false" + ":" + now.getTime().toString());
     Logger.log("Initialized");
   } else {
     Logger.log("Already Initialized");
@@ -78,7 +80,7 @@ function rollingProcess() {
     const processRunningTimestamp = parseInt(scriptProperties.getProperty("processRunning").split(':')[1]);
     const diffMilliseconds = now.getTime() - processRunningTimestamp;
     Logger.log("rollingProcess diffMilliseconds: " + diffMilliseconds);
-    if (processRunning != "true" || (processRunning == "false" && diffMilliseconds > 360000)) {
+    if (processRunning != "true" || (processRunning == "true" && diffMilliseconds > 360000)) {
        process();
     } else {
       Logger.log("process already running. Skipping.");
