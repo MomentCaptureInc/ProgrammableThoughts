@@ -271,7 +271,7 @@ function speechToText(file) {
   const totalBilledTime = obj.totalBilledTime;
   Logger.log("totalBilledTime:" + totalBilledTime);
   const averageConfidence = confidences.reduce((a, b) => a + b) / confidences.length;
-  text = text + "(confidence: " + averageConfidence.toFixed(2) + ")";
+  text = text + "(" + (averageConfidence * 100).toFixed(2) + "% confidence)";
   return text;
 }
 
