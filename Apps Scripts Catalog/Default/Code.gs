@@ -73,7 +73,12 @@ function initialize() {
 
 function rollingProcess() {
   try {
-    if (scriptProperties.getProperty("processRunning") != "true") {
+    const now = new Date();
+    const processRunning = scriptProperties.getProperty("processRunning").split(':')[0];
+    const processRunningTimestamp = parseInt(scriptProperties.getProperty("processRunning").split(':')[1]);
+    const diffMilliseconds = now.getTime() - processRunningTimestamp;
+    Logger.log("rollingProcess diffMilliseconds: " + diffMilliseconds);
+    if (processRunning != "true" || (processRunning == "false" && diffMilliseconds > 360000)) {
        process();
     } else {
       Logger.log("process already running. Skipping.");
@@ -86,7 +91,8 @@ function rollingProcess() {
 function process() {
   try {
     Logger.log("Process");
-    scriptProperties.setProperty("processRunning", "true");
+    const startTime = new Date();
+    scriptProperties.setProperty("processRunning", "true" + ":" + startTime.getTime().toString());
     const thoughtSpreadsheet = SpreadsheetApp.openById(masterSheetID);
     const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
     var pizza = false;
@@ -170,9 +176,11 @@ function process() {
     } else {
       Logger.log("No thoughts to process");
     }
-    scriptProperties.setProperty("processRunning", "false");
+    const endTime = new Date();
+    scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString());
   } catch (error) {
-    scriptProperties.setProperty("processRunning", "false");
+    const endTime = new Date();
+    scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString());
     Logger.log(error);
   }
 }
@@ -245,10 +253,12 @@ function speechToText(file) {
   const obj = JSON.parse(response.getContentText());
   const results = obj.results;
   if (!results) return; 
+  const confidences = [];
   for (var i = 0; i < results.length; i++) {
     for (var j = 0; j < results[i].alternatives.length; j++) {
       const transcript = obj.results[i].alternatives[j].transcript;
       const confidence = obj.results[i].alternatives[j].confidence;
+      confidences.push(confidence);
       Logger.log("results[" + i + "].alternatives[" + j + "].transcript: " + transcript);
       Logger.log("results[" + i + "].alternatives[" + j + "].confidence: " + confidence);
       text = text ? text + ", " + transcript : transcript;
@@ -260,6 +270,8 @@ function speechToText(file) {
   }
   const totalBilledTime = obj.totalBilledTime;
   Logger.log("totalBilledTime:" + totalBilledTime);
+  const averageConfidence = confidences.reduce((a, b) => a + b) / confidences.length;
+  text = text + "(confidence: " + averageConfidence.toFixed(2) + ")";
   return text;
 }
 
