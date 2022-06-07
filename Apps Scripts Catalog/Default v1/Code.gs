@@ -1,17 +1,16 @@
-/////////////////////////////////////////////////////////////////////
-// WELCOME TO THE DEFAULT PROGRAMMABLE THOUGHTS GOOGLE APPS SCRIPT //
-/////////////////////////////////////////////////////////////////////
-// IF THIS IS YOUR FIRST TIME HERE, YOU NEED TO RUN THE 'INITIALIZE' FUNCTION. HIT THE 'RUN' BUTTON IN THE TOP MENU AND GO THROUGH THE AUTHORIZATION FLOW.
-// NOTE THAT THESE SOMEWHAT SCARY LOOKING PERMISSIONS ARE ONLY BEING GRANTED TO YOUR OWN PERSONAL ACCOUNT (AND NO ONE ELSE).
-// AFTER THAT, YOU'RE FREE TO TINKER AWAY. BUT IT MIGHT BE A GOOD IDEA TO JUST GET A FEEL FOR THE OPERATIONAL FLOW BEFORE DIGGING INTO CODE MODIFICATIONS.
+////////////////////////////////////////////////////////////////////////
+// WELCOME TO THE V1 DEFAULT PROGRAMMABLE THOUGHTS GOOGLE APPS SCRIPT //
+///////////////////////////////////////////////////////////////////////
+
+// If this is your first time here, you need to run the 'initialize' function. Hit the 'run' button in the top menu and go through the authorization flow. Note that these somewhat scary looking permissions are only being granted to your own personal account (and no one else).After that, you're free to tinker away. But it might be a good idea to just get a feel for the operational flow before digging into code modifications.
 
 /////////////////////////
 // OPTIONAL PARAMETERS //
 /////////////////////////
-const googleCloudSpeechToTextAPIKey = "AIzaSyDXgPaIIbqpYeNSMlVH5g8oKddHWGH2fSo"; // REPLACE WITH YOUR OWN GOOGLE SPEECH TO TEXT API KEY. THE EXISTING KEY BELONGS TO PROGRAMMABLE THOUGHTS AND CAN BE USED IN YOUR PERSONAL SCRIPT.
-const todoistTestKey = ""; // REPLACE WITH YOUR OWN TODOSIT TEST API KEY
-const todoistProjectID = ""; // REPLACE WITH YOUR OWN TODOSIT PROJECT ID
-const publishedUrl = ""; // REPLACE WITH DEPLOYED WEB APP URL - ScriptApp.getService().getUrl() broken - https://issuetracker.google.com/issues/170799249
+const googleCloudSpeechToTextAPIKey = ""; // Replace with your own Google Cloud API Key with Cloud Speech-to-Text permissions. Go to https://console.cloud.google.com/projectcreate and create a new project and then to https://console.cloud.google.com/billing to add billing information (don't worry, speech-to-text is extremely inexpensive). After you have created a billing account, go to https://console.developers.google.com/start/api?id=speech.googleapis.com to enable the Cloud Speech-to-Text API. Once enabled, go to https://console.cloud.google.com/apis/credentials and create an API key. Edit this key and give it a friendly name like 'Cloud Speech-to-Text API Key', and then also enable API restrictions to just 'Cloud Speech-to-Text API'
+const todoistTestKey = ""; // Replace with your own Todoist Test API Key
+const todoistProjectID = ""; // Repalce with your own Todoist Project ID
+const publishedUrl = ""; // Replace with deployed web app url. Hit the 'deploy' button on the top right. Under 'Select Type' choose web app, and then hit deploy. Copy that url to this variable
 
 const speechUrl = "https://speech.googleapis.com/v1p1beta1/";
 const scriptProperties = PropertiesService.getScriptProperties();
@@ -28,8 +27,12 @@ function initialize() {
     const foldersArrayIDs = [];
     const folders = DriveApp.getFoldersByName("Programmable Thoughts");
     while (folders.hasNext()) foldersArrayIDs.push(folders.next().getId());
+    if (!foldersArrayIDs || (foldersArrayIDs && foldersArrayIDs.length == 0)) {
+      Logger.log("Programmable Thoughts folder not found. Did you go through the app's setup process?");
+      return;
+    }
     Logger.log("Folders found: " + foldersArrayIDs.length);
-    const thoughtFolder = DriveApp.getFolderById(foldersArrayIDs[0]); // HACK - THERE SHOULD ONLY BE 1...NEED TO HANDLE IF THERE ARE MORE
+    const thoughtFolder = DriveApp.getFolderById(foldersArrayIDs[0]); // Find a better way to do this
     thoughtFolder.addFile(scriptFile);
     DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(scriptFile);
     scriptProperties.setProperty("thoughtFolderID", thoughtFolder.getId());
@@ -75,10 +78,11 @@ function initialize() {
 function rollingProcess() {
   try {
     const now = new Date();
-    const processRunning = scriptProperties.getProperty("processRunning").split(':')[0];
-    const processRunningTimestamp = parseInt(scriptProperties.getProperty("processRunning").split(':')[1]);
+    const processRunningString = scriptProperties.getProperty("processRunning");
+    const processRunning = processRunningString == null ? "false" : processRunningString.split(':')[0];
+    const processRunningTimestamp =processRunningString == null ? 0 : parseInt(processRunningString.split(':')[1]);
     const diffMilliseconds = now.getTime() - processRunningTimestamp;
-    Logger.log("rollingProcess diffMilliseconds: " + diffMilliseconds);
+    Logger.log("rollingProcess processRunning: " + processRunning + " diffMilliseconds: " + diffMilliseconds);
     if (processRunning != "true" || (processRunning == "true" && diffMilliseconds > 360000)) {
        process();
     } else {
@@ -91,88 +95,62 @@ function rollingProcess() {
 
 function process() {
   try {
-    Logger.log("Process");
     const startTime = new Date();
     scriptProperties.setProperty("processRunning", "true" + ":" + startTime.getTime().toString());
     const thoughtSpreadsheet = SpreadsheetApp.openById(masterSheetID);
     const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
-    var pizza = false;
-    const textArray = [];
-    // const blobArray = [];
-    const thoughts = getAllThoughts();
-    var thoughtDateCreatedDateObject
-    if (thoughts && thoughts.length > 0) {
-      Logger.log("Processing " + thoughts.length + " thoughts");
-      for (var i = 0; i < thoughts.length; i++) {
-        const thought = thoughts[i];
-        const thoughtDateCreated = thought.getDateCreated(); 
-        thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
-        var actionMessage;  
-        Logger.log("name: " + thought.getName() + " dateCreated: " + thoughtDateCreated);
-        const text = speechToText(thought);
-        if (!text) {
-          Logger.log("Empty audio file, more acurately, no text could be transcribed");
-          DriveApp.getFolderById(processedFolderID).addFile(thought);
-          DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
-          const data = [
-            thought.getId(),
-            thought.getName(),
-            thoughtDateCreated,
-            "https://drive.google.com/file/d/" + thought.getId() + "/view",
-            "",
-            ""
-          ];
-          insertRow(thoughtMasterSheet, data, 2)
-          continue;
-        }
-        if (todoistTestKey && todoistProjectID) actionMessage = actions(text);
-        const doc = DocumentApp.create(thought.getName());
-        doc.getBody().setText(text);
-        const audioLink = "<a href=" + "'https://drive.google.com/file/d/" + thought.getId() + "/view'" + ">audio</a>";
-        const docLink = "<a href=" + "'https://drive.google.com/file/d/" + doc.getId() + "'>doc</a>" // "https://docs.google.com/document/d/" + doc.getId();
-        textArray.push(text + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=favorite" + "'>favorite</a>" + " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=trash" + "'>trash</a>" : "") + (todoistTestKey && todoistProjectID ? " / " + "<a href='" + publishedUrl + "?id=" + thought.getId() + "&action=task" + "'>task</a>" : ""));
-        // blobArray.push(thought.getBlob());
-        const data = [
-          thought.getId(),
-          thought.getName(),
-          thoughtDateCreated,
-          "https://drive.google.com/file/d/" + thought.getId() + "/view",
-          text,
-          "https://drive.google.com/file/d/" + doc.getId() 
-        ];
-        insertRow(thoughtMasterSheet, data, 2)
-        DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId()));
-        DriveApp.getFolderById(docFolderID).addFile(DriveApp.getFileById(doc.getId()));
-        DriveApp.getFolderById(processedFolderID).addFile(thought);
-        DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
-        if (text.toLowerCase().includes("pizza")) pizza = true;
-        Logger.log("Thought " + (i + 1) + " processed");
-      }
-      if (textArray && textArray.length > 0) textArray.reverse();
-      if (pizza) {
-        Logger.log("pizza");
-        const body = "pizza pizza";
-        const htmlBody = '<img src="https://files.panomoments.com/santarpios-pizza.jpg" alt="pizza"/>';
-        GmailApp.sendEmail(Session.getActiveUser().getEmail(), "Pizza Pizza", body, {
-          htmlBody: htmlBody
-        });
-      } else if (textArray && textArray.length > 0) {
-        var body;
-        var htmlBody;
-        const tailMessage = "";
-        const tailHtmlmessage = "<br><br>" + (actionMessage ? actionMessage : "") + "<br><br><br><br><br><a href='https://docs.google.com/spreadsheets/d/" + thoughtSpreadsheet.getId() + "'>All Thoughts</a> - say 'pizza'";
-        if (thoughts.length > 1) {
-          body = textArray.map(function(val, index) { return (index + 1).toString() + ". " + val; }).join(" | ") + tailMessage;
-          htmlBody = textArray.map(function(val, index) { return (index + 1).toString() + ". " + val; }).join("<br>") + tailHtmlmessage;
-        } else {
-          body = textArray.join(" | ") + tailMessage;
-          htmlBody = textArray.join("<br>") + tailHtmlmessage;
-        }
-        const subject = 'Thought ' + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
-        GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
-          htmlBody: htmlBody
-        });
-      }
+    const thought = getAllThoughts()[0]; // Need to test sort. Could be last entry.
+    if (thought) {
+      const thoughtDateCreated = thought.getDateCreated(); 
+      const thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
+      Logger.log("Processing thought: " + thought.getName() + " dateCreated: " + thoughtDateCreated);
+      var actionMessage;  
+      const text = googleCloudSpeechToTextAPIKey != "" ? speechToText(thought) : "";
+      if (text != "" && todoistTestKey && todoistProjectID) actionMessage = actions(text);
+      const doc = DocumentApp.create(thought.getName());
+      if (text != "") doc.getBody().setText(text);
+      const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
+      const docUrl = "https://docs.google.com/document/d/" + doc.getId();
+      const favoriteUrl = publishedUrl + "?id=" + thought.getId() + "&action=favorite";
+      const trashUrl = publishedUrl + "?id=" + thought.getId() + "&action=trash";
+      const taskUrl = publishedUrl + "?id=" + thought.getId() + "&action=task";
+      const audioLink = "<a href='" + audioUrl + "'>audio</a>";
+      const docLink = "<a href='" + docUrl + "'>doc</a>";
+      const favoriteLink = "<a href='" + favoriteUrl + "'>favorite</a>";
+      const trashLink = "<a href='" + trashUrl + "'>trash</a>";
+      const taskLink = "<a href='" + taskUrl + "'>task</a>";
+      const displayText = text + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID ? " / " + taskUrl : "");
+      const displayHtmlText = text + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID ? " / " + taskLink : "");
+      const data = [
+        thought.getId(),
+        thought.getName(),
+        thoughtDateCreated,
+        "https://drive.google.com/file/d/" + thought.getId() + "/view",
+        text,
+        "https://docs.google.com/document/d/" + doc.getId() 
+      ];
+      insertRow(thoughtMasterSheet, data, 2)
+      DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId()));
+      DriveApp.getFolderById(docFolderID).addFile(DriveApp.getFileById(doc.getId()));
+      DriveApp.getFolderById(processedFolderID).addFile(thought);
+      DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
+      const thoughtSpreadsheetUrl = "https://docs.google.com/spreadsheets/d/" + thoughtSpreadsheet.getId();
+      const thoughtSpreadsheetLink = "<a href='" + thoughtSpreadsheetUrl + "'>All Thoughts</a>";
+      const tailMessage = `
+      
+
+      ${(actionMessage ? actionMessage : "")}
+      
+
+      ${thoughtSpreadsheetUrl}`;
+      const tailHtmlmessage = "<br><br>" + (actionMessage ? actionMessage : "") + "<br><br><br><br><br>" + thoughtSpreadsheetLink;
+      body = displayText + tailMessage;
+      htmlBody = displayHtmlText + tailHtmlmessage;
+      const subject = 'Thought ' + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
+      GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
+        htmlBody: htmlBody,
+        attachments: [thought.getBlob().setName(thought.getName())]
+      });
       Logger.log("Processing complete");
     } else {
       Logger.log("No thoughts to process");
@@ -253,7 +231,7 @@ function speechToText(file) {
   const response = UrlFetchApp.fetch(url, options);
   const obj = JSON.parse(response.getContentText());
   const results = obj.results;
-  if (!results) return; 
+  if (!results) return "(no text could be transcribed)"; 
   const confidences = [];
   for (var i = 0; i < results.length; i++) {
     for (var j = 0; j < results[i].alternatives.length; j++) {
@@ -297,6 +275,7 @@ function paddedDate(date) {
 }
 
 function getSheetById(spreadsheet,id) {
+  if (!processedFolderID || !docFolderID || !thoughtFolderID || !masterSheetID) return;
   return spreadsheet.getSheets().filter(
     function(s) {return s.getSheetId() === id;}
   )[0];
@@ -304,9 +283,6 @@ function getSheetById(spreadsheet,id) {
 
 function doGet(e) {
   Logger.log(e);
-  const adminHTML = HtmlService.createTemplateFromFile('admin');
-  const admin = adminHTML.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  admin.setTitle("Thoughts Admin");
   const action = e.parameter.action ? decodeURI(e.parameter.action).toString() : "";
   const id = e.parameter.id ? decodeURI(e.parameter.id).toString() : "";
   if (action && id) {
@@ -348,5 +324,4 @@ function doGet(e) {
     response.append("<h2>" + message + "</h2>")
     return response;
   }
-  return admin;
 }
