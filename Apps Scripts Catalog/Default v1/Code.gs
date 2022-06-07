@@ -100,14 +100,17 @@ function process() {
     const thoughtSpreadsheet = SpreadsheetApp.openById(masterSheetID);
     const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
     const thought = getAllThoughts()[0]; // Need to test sort. Could be last entry.
+    const filename = thought.getName();
     if (thought) {
       const thoughtDateCreated = thought.getDateCreated(); 
       const thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
-      Logger.log("Processing thought: " + thought.getName() + " dateCreated: " + thoughtDateCreated);
-      var actionMessage;  
-      const text = googleCloudSpeechToTextAPIKey != "" ? speechToText(thought) : "";
-      if (text && todoistTestKey && todoistProjectID) actionMessage = actions(text);
-      const doc = DocumentApp.create(thought.getName());
+      Logger.log("Processing thought: " + filename + " dateCreated: " + thoughtDateCreated);
+      var actionMessage;
+      var text = googleCloudSpeechToTextAPIKey != "" ? speechToText(thought) : "";
+      const taggingResult = processTags(filename,text);
+      text = taggingResult[0];
+      const emailSubjectModifiers = taggingResult[1];
+      const doc = DocumentApp.create(filename);
       if (text) doc.getBody().setText(text);
       const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
       const docUrl = "https://docs.google.com/document/d/" + doc.getId();
@@ -123,7 +126,7 @@ function process() {
       const displayHtmlText = text + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
       const data = [
         thought.getId(),
-        thought.getName(),
+        filename,
         thoughtDateCreated,
         "https://drive.google.com/file/d/" + thought.getId() + "/view",
         text,
@@ -146,10 +149,10 @@ function process() {
       const tailHtmlmessage = "<br><br>" + (actionMessage ? actionMessage : "") + "<br><br><br><br><br>" + thoughtSpreadsheetLink;
       body = displayText + tailMessage;
       htmlBody = displayHtmlText + tailHtmlmessage;
-      const subject = 'Thought ' + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
+      const subject = (emailSubjectModifiers && emailSubjectModifiers.length > 0 ? emailSubjectModifiers.join(' / ') + " - " : "") + "Thought " + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
       GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
         htmlBody: htmlBody,
-        attachments: [thought.getBlob().setName(thought.getName())]
+        attachments: [thought.getBlob().setName(filename)]
       });
       Logger.log("Processing complete");
     } else {
@@ -164,17 +167,39 @@ function process() {
   }
 }
 
-function actions(text) {
-  if (text.includes("task start") && text.includes("task stop")) { // Currently can't handle multiple tasks
-    const taskTextArray = text.split("task start");
-    const task = taskTextArray[1].split("task stop")[0];
-    addTask(task);
-    return "Task Added: " + task;
+function processTags(filename, text) {
+  const emailSubjectModifiers = [];
+  const tags = filename.split('#')[2].split('$');
+  tags.pop(); // Remove file extension
+  Logger.log(tags);
+  for (var i = 0; i < tags.length; i++) {
+    switch(tags[i]) {
+      case "task":
+        const result = JSON.parse(addTask(text));
+        if (result && result.id && result.id.toString().length > 0) {
+          emailSubjectModifiers.push("Task Added");
+        } else {
+          emailSubjectModifiers.push("Task Failed");
+        }
+        break;
+      case "p1":
+        emailSubjectModifiers.push("High Priority");
+        break;
+      case "p2":
+        emailSubjectModifiers.push("Medium Priority");
+        break;
+      case "p3":
+        emailSubjectModifiers.push("Low Priority");
+        break;
+    }
   }
+  return [text, emailSubjectModifiers];
 }
 
-function addTask(task){
-  if (!todoistTestKey) return;
+function addTask(task) {
+  if (!todoistTestKey || !todoistProjectID || !publishedUrl) return;
+  task = task.split('(')[0]; // Remove confidence text
+  if (!task) return;
   Logger.log("Adding task: " + task);
   const url = "https://api.todoist.com/rest/v1/tasks";
   var data = {
@@ -192,6 +217,7 @@ function addTask(task){
   };
   const response = UrlFetchApp.fetch(url, options);
   Logger.log(response)
+  return response;
 }
 
 function getAllThoughts() {
@@ -231,7 +257,7 @@ function speechToText(file) {
   const response = UrlFetchApp.fetch(url, options);
   const obj = JSON.parse(response.getContentText());
   const results = obj.results;
-  if (!results) return "(no text could be transcribed)"; 
+  if (!results) return "[no text could be transcribed]"; 
   const confidences = [];
   for (var i = 0; i < results.length; i++) {
     for (var j = 0; j < results[i].alternatives.length; j++) {
