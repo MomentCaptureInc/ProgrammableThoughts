@@ -10,7 +10,7 @@
 const googleCloudSpeechToTextAPIKey = ""; // Replace with your own Google Cloud API Key with Cloud Speech-to-Text permissions. Go to https://console.cloud.google.com/projectcreate and create a new project and then to https://console.cloud.google.com/billing to add billing information (don't worry, speech-to-text is extremely inexpensive). After you have created a billing account, go to https://console.developers.google.com/start/api?id=speech.googleapis.com to enable the Cloud Speech-to-Text API. Once enabled, go to https://console.cloud.google.com/apis/credentials and create an API key. Edit this key and give it a friendly name like 'Cloud Speech-to-Text API Key', and then also enable API restrictions to just 'Cloud Speech-to-Text API'
 const todoistTestKey = ""; // Replace with your own Todoist Test API Key
 const todoistProjectID = ""; // Repalce with your own Todoist Project ID
-const publishedUrl = ""; // Replace with deployed web app url. Hit the 'deploy' button on the top right. Under 'Select Type' choose web app, and then hit deploy. Copy that url to this variable
+const publishedUrl = ""; // Replace with deployed web app url. Hit the 'Deploy' button on the top right. Then select 'New Deployment', and under 'Select Type' choose web app, and then hit deploy (leave all config at defaults). Copy that url to this variable
 
 const speechUrl = "https://speech.googleapis.com/v1p1beta1/";
 const scriptProperties = PropertiesService.getScriptProperties();
@@ -106,9 +106,9 @@ function process() {
       Logger.log("Processing thought: " + thought.getName() + " dateCreated: " + thoughtDateCreated);
       var actionMessage;  
       const text = googleCloudSpeechToTextAPIKey != "" ? speechToText(thought) : "";
-      if (text != "" && todoistTestKey && todoistProjectID) actionMessage = actions(text);
+      if (text && todoistTestKey && todoistProjectID) actionMessage = actions(text);
       const doc = DocumentApp.create(thought.getName());
-      if (text != "") doc.getBody().setText(text);
+      if (text) doc.getBody().setText(text);
       const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
       const docUrl = "https://docs.google.com/document/d/" + doc.getId();
       const favoriteUrl = publishedUrl + "?id=" + thought.getId() + "&action=favorite";
@@ -119,8 +119,8 @@ function process() {
       const favoriteLink = "<a href='" + favoriteUrl + "'>favorite</a>";
       const trashLink = "<a href='" + trashUrl + "'>trash</a>";
       const taskLink = "<a href='" + taskUrl + "'>task</a>";
-      const displayText = text + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID ? " / " + taskUrl : "");
-      const displayHtmlText = text + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID ? " / " + taskLink : "");
+      const displayText = text + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
+      const displayHtmlText = text + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
       const data = [
         thought.getId(),
         thought.getName(),
