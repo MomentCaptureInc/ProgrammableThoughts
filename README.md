@@ -51,6 +51,7 @@ Programmable Thoughts was originally conceived as a quick-entry thought organize
   - Thought and mood journal
   - Task manager
   - CBT tool
+  - Integrated with [IFTTT](https://ifttt.com) or [Zapier](https://zapier.com)
   - etc.
 
 ## Trust and Validation
