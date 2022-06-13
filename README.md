@@ -38,7 +38,7 @@ The [Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs) Apps Script is c
 There's no single answer to this, but the core concept relies on the ability to quickly offload thoughts so you can process them later. Your email inbox is where the 'processing' is done. This can create a bit of a challenge if you have 1000 unread emails and spam funneling in throughout the day. Below you'll find a growing list of tips on how to best use and tailor Programmable Thoughts for your own unique way of thinking.
 
 **Email Filters**<br>
-If you're not an ardent 'Inbox Zero' follower, you'll likely want to create an email filter that adds a 'Thought' label, and also consider automatic mark as read. That will quiet things down a bit.
+If you're not an ardent 'Inbox Zero' follower, you'll likely want to create an email filter that adds a 'Thought' label, and also consider automatically marking the emails as read. That will quiet things down a bit.
 
 **Tags**<br>
 There is built-in support for 'p1, p2, p3' for priority level, and 'task' for connecting to Todoist. But you should try creating your own. You can even program your tags to act as buttons (long hold to send just the tag with no audio), enabling programmatic control of just about anything, anywhere. 
