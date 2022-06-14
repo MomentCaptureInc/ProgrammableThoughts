@@ -147,7 +147,7 @@ function process() {
       Logger.log("Processing thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize());
       const canceled = isCanceled(filename);
       const dupe = DriveApp.getFolderById(processedFolderID).getFilesByName(filename).hasNext();
-      if (canceled || dupe) {
+      if (canceled || (dupe && DriveApp.getFolderById(processedFolderID).getFilesByName(filename).next().getSize() == thought.getSize())) {
         Logger.log("Canceled: " + canceled + " Dupe: " + dupe);
         DriveApp.getFolderById(processedFolderID).addFile(thought);
         DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
