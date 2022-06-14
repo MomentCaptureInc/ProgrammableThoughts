@@ -130,7 +130,6 @@ function rollingProcess() {
 // 3. Parses tags attached and performs tag specific functionality if defined
 // 4. Adds a record to the Master Spreadsheet
 // 5. Sends an email to you containing the transcription (if available) and attaches the audio recording
-// 
 function process() {
   try {
     const startTime = new Date();
@@ -146,8 +145,10 @@ function process() {
       const thoughtDateCreated = thought.getDateCreated();
       const thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
       Logger.log("Processing thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize());
-      if (isCanceled(filename)) {
-        Logger.log("Thought was canceled");
+      const canceled = isCanceled(filename);
+      const dupe = DriveApp.getFolderById(processedFolderID).getFilesByName(filename).hasNext();
+      if (canceled || dupe) {
+        Logger.log("Canceled: " + canceled + " Dupe: " + dupe);
         DriveApp.getFolderById(processedFolderID).addFile(thought);
         DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
         const endTime = new Date();
