@@ -144,7 +144,8 @@ function process() {
       const filename = thought.getName();
       const thoughtDateCreated = thought.getDateCreated();
       const thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
-      Logger.log("Processing thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize());
+      const sampleRate = filename.split('*').length > 1 ? parseInt(filename.split('*')[1]) : 44100;
+      Logger.log("Processing thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
       const canceled = isCanceled(filename);
       const dupe = DriveApp.getFolderById(processedFolderID).getFilesByName(filename).hasNext();
       if (canceled || (dupe && DriveApp.getFolderById(processedFolderID).getFilesByName(filename).next().getSize() == thought.getSize())) {
@@ -155,7 +156,7 @@ function process() {
         scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString());
         return;
       }
-      var text = thought.getSize() > 20000 && googleCloudSpeechToTextAPIKey != "" ? speechToText(thought) : ""; // Transcribe the audio if the file size > 20KB
+      var text = thought.getSize() > 20000 && googleCloudSpeechToTextAPIKey != "" ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 20KB
       const processTagsResponse = processTags(filename, text, []); // Process tags appended to the filename
       text = processTagsResponse.text; // Pick up any modifications from the tag processing
       const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
@@ -342,12 +343,12 @@ function getAllThoughts() {
 }
 
 // Upload an audio file to the Google Cloud Speech-to-Text API
-function speechToText(file) {
+function speechToText(file, sampleRate) {
   var text;
   const data = {
     "config": { // See the configuration parameters here - https://cloud.google.com/speech-to-text/docs/reference/rest/v1p1beta1/RecognitionConfig
         "encoding":"MP3", // This and sampleRateHertz will soon be configurable in the native apps
-        "sampleRateHertz": 44100,
+        "sampleRateHertz": sampleRate,
         "languageCode": "en-US",
         "enableAutomaticPunctuation": true,
         "model": "default"
