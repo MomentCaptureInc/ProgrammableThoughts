@@ -60,7 +60,7 @@ function initialize() {
     scriptProperties.setProperty("thoughtFolderID", thoughtFolder.getId()); // Save the parent folder ID in a Script Property
     scriptProperties.setProperty("processedFolderID", thoughtFolder.createFolder("Processed").getId()); // Create a 'Processed' folder and store the ID in a Script Property
     scriptProperties.setProperty("docFolderID", thoughtFolder.createFolder("Docs").getId()); // Create a 'Docs' folder and store the ID in a Script Property
-    // Create a new Google Spreadsheet which will act as a database of all thoughts
+    // Create a new Google Spreadsheet which will act as a database of all Thoughts
     // Configure the formatting and add a header
     const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 7);
     const entireSheetRange = masterSheet.getRange("A1:G2");
@@ -138,14 +138,15 @@ function process() {
     const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
     // Get a single Thought
     // This currently functions as LIFO which is maybe not ideal in all situations.
-    // For cases where there are unsynced thoughts being uploaded + new thoughts, preference should probably go to do the newest ones first, so LIFO makes sense. But it is debatable.
-    const thought = getAllThoughts()[0];
+    // For cases where there are unsynced Thoughts being uploaded + new Thoughts, preference should probably go to do the newest ones first, so LIFO makes sense. But it is debatable.
+    const allThoughts = getAllThoughts();
+    const thought = allThoughts[0];
     if (thought) { // Only continue if there's a Thought ready to be processed
       const filename = thought.getName();
       const thoughtDateCreated = thought.getDateCreated();
       const thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
       const sampleRate = filename.split('*').length > 1 ? parseInt(filename.split('*')[1]) : 44100;
-      Logger.log("Processing thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
+      Logger.log("Processing Thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
       const canceled = isCanceled(filename);
       const dupe = DriveApp.getFolderById(processedFolderID).getFilesByName(filename).hasNext();
       if (canceled || (dupe && DriveApp.getFolderById(processedFolderID).getFilesByName(filename).next().getSize() == thought.getSize())) {
@@ -206,7 +207,7 @@ function process() {
       });
       Logger.log("Processing complete");
     } else {
-      Logger.log("No thoughts to process");
+      Logger.log("No Thoughts to process");
     }
     const endTime = new Date();
     scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString()); // Reset the 'processRunning' flag and add the current timestamp
@@ -217,7 +218,6 @@ function process() {
   }
 }
 
-
 // Takes a filename and outputs an array of tags
 // For the example filename "recording20220611132759349#tags#p1$task$.mp3"
 // We're taking the index 2 entry from the # split which would be p1$task$.mp3 and further splitting by '$' which leaves tags = ["p1", "task", ".mp3"]
@@ -226,7 +226,6 @@ function splitTagsFromFilename(filename) {
   tags.pop(); // Removes the last entry which is the file extension - ".mp3"
   return tags;
 }
-
 
 // Check for a special 'cancel' tag that skips the rest of the processing code
 // While the need for a 'cancel' tag is mostly moot given the official apps support canceling directly in the client (long hold the stop button for 1 second)
@@ -248,7 +247,6 @@ function isCanceled(filename) {
   return canceled;
 }
 
-
 // Iterate through the uploaded tags (on both files with recordings and ones without - ie. 'Tag Commands')
 // Each supported tag may trigger unique behavior and has its own case/switch code block
 // All unmatched tags are returned in a new array and also added to the email subject line 
@@ -257,15 +255,16 @@ function processTags(filename, text, newTags) {
   const response = {};
   const emailSubjectModifiers = [];
   const tags = splitTagsFromFilename(filename);
-  if (newTags && newTags.length > 0) for (var i = 0; i < newTags.length; i++) tags.push(newTags[i]); // If any new tags are passed from doGet() actions, include those tags as they might not have been on the original filename
+  if (newTags && newTags.length > 0) 
+    for (var i = 0; i < newTags.length; i++) 
+      tags.push(newTags[i]); // If any new tags are passed from doGet() actions, include those tags as they might not have been on the original filename
   response.todoistPriority = 1; // Set default priority to the lowest
   response.origTags = [...tags]; // Return a shallow copy of the original tags
   Logger.log("Original tags: " + response.origTags.join(', '));
   const supportedTags = ["p1","p2","p3","task"]; // 'task' needs to be last in this array to receive updated priority metadata from the p1,p2,p3 tag processing based the structure of the for loops below
   for (var i = 0; i < supportedTags.length; i++) {
-    tags.find(element => { // Array.find allows us to use a function to compare elements
-      if (element && element.toLowerCase() === supportedTags[i].toLowerCase()) {  // toLowerCase() ensures we don't miss a tag due to case differences
-        tags.splice(element.index, 1); // Remove the found supported tag from the tag list based on the element's index. The '1' in the splice() function means we're removing just 1 item. This doesn't handle if the tag was duplicated in this list.
+    const index = tags.findIndex(element => { // findIndex allows us to use a function to compare elements with toLowerCase() to ensure we don't miss a tag due to case differences
+      if(element.toLowerCase() === supportedTags[i].toLowerCase()) {
         switch(element.toLowerCase()) { // Decide what to do for each supported tag
           case "task":
             if (!text) break; // Skip adding a task if the transcription is empty
@@ -290,7 +289,11 @@ function processTags(filename, text, newTags) {
             break;
         }
       }
+      return element.toLowerCase() === supportedTags[i].toLowerCase(); // Necessary for the index to return the actual index
     });
+    if (index !== -1) {
+      tags.splice(index, 1); // Remove the found supported tag from the tag list based on the element's index. The '1' in the splice() function means we're removing just 1 item.
+    }
   }
   Logger.log("Unmatched tags: " + tags.join(', ')); // Due to the splice() above, tags now only has unmatched entries
   for (var i = 0; i < tags.length; i++) {
