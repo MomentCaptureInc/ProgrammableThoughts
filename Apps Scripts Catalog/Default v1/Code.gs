@@ -157,13 +157,7 @@ function process() {
         scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString());
         return;
       }
-      var text = thought.getSize() > 20000 && googleCloudSpeechToTextAPIKey != "" ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 20KB
-      const processTagsResponse = processTags(filename, text, []); // Process tags appended to the filename
-      text = processTagsResponse.text; // Pick up any modifications from the tag processing
-      const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
-      const origTags = processTagsResponse.origTags;
       const doc = DocumentApp.create(filename); // Every Thought has an associated Google Doc created
-      if (text) doc.getBody().setText(text); // Add the transcribed text (if available) to the Google Doc
       // The following chunk of code is building pieces of the email
       const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
       const docUrl = "https://docs.google.com/document/d/" + doc.getId();
@@ -175,6 +169,12 @@ function process() {
       const favoriteLink = "<a href='" + favoriteUrl + "'>favorite</a>";
       const trashLink = "<a href='" + trashUrl + "'>trash</a>";
       const taskLink = "<a href='" + taskUrl + "'>task</a>";
+      var text = thought.getSize() > 20000 && googleCloudSpeechToTextAPIKey != "" ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 20KB
+      const processTagsResponse = processTags(filename, text, [], audioUrl); // Process tags appended to the filename
+      text = processTagsResponse.text; // Pick up any modifications from the tag processing
+      const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
+      const origTags = processTagsResponse.origTags;
+      if (text) doc.getBody().setText(text); // Add the transcribed text (if available) to the Google Doc
       const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
       const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
       const data = [
@@ -250,7 +250,7 @@ function isCanceled(filename) {
 // Iterate through the uploaded tags (on both files with recordings and ones without - ie. 'Tag Commands')
 // Each supported tag may trigger unique behavior and has its own case/switch code block
 // All unmatched tags are returned in a new array and also added to the email subject line 
-function processTags(filename, text, newTags) {
+function processTags(filename, text, newTags, audioUrl) {
   Logger.log("processTags filename: " + filename + " text: " + text + " newTags: " + newTags.join(', '));
   const response = {};
   const emailSubjectModifiers = [];
@@ -268,7 +268,7 @@ function processTags(filename, text, newTags) {
         switch(element.toLowerCase()) { // Decide what to do for each supported tag
           case "task":
             if (!text) break; // Skip adding a task if the transcription is empty
-            const result = JSON.parse(addTask(text, response.todoistPriority)); // Call the ToDoist API and store the result
+            const result = JSON.parse(addTask(text, response.todoistPriority, audioUrl)); // Call the ToDoist API and store the result
             if (result && result.id && result.id.toString().length > 0) { // If the result.id is populated, assume the task was added successfully
               emailSubjectModifiers.push("Task Added"); // Add email subject modifiers based on Todoist response
             } else {
@@ -306,7 +306,7 @@ function processTags(filename, text, newTags) {
 }
 
 // Post a transcribed Thought as a Todoist task
-function addTask(task, priority) {
+function addTask(task, priority, audioUrl) {
   if (!todoistTestKey || !todoistProjectID || !publishedUrl) return;
   task = task.split('(')[0]; // Remove confidence text
   if (!task) return;
@@ -314,6 +314,7 @@ function addTask(task, priority) {
   const url = "https://api.todoist.com/rest/v1/tasks";
   var data = {
     'content': task,
+    'description': audioUrl,
     'priority': priority,
     'project_id': todoistProjectID,
     'X-Request-Id': Utilities.getUuid()
@@ -462,7 +463,7 @@ function doGet(e) {
       message = "task added";
       for (var i = 0; thoughtData.length; i++) {
         if (id == thoughtData[i][0]) {
-          processTags(thoughtData[i][1], thoughtData[i][4], ["task"]); // Running through processTags() enables adding priority to the task if it was already added as a tag
+          processTags(thoughtData[i][1], thoughtData[i][4], ["task"], thoughtData[i][3]); // Running through processTags() enables adding priority to the task if it was already added as a tag
           break;
         }
       }
