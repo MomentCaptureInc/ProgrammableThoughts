@@ -145,7 +145,7 @@ function process() {
       const filename = thought.getName();
       const thoughtDateCreated = thought.getDateCreated();
       const thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
-      const sampleRate = filename.split('*').length > 1 ? parseInt(filename.split('*')[1]) : 44100;
+      const sampleRate = filename.split('(').length > 1 && filename.split(')').length > 1 ? parseInt(filename.split('(')[1].split(')')[0]) : 44100; // Parse sample rate from filename
       Logger.log("Processing Thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
       const canceled = isCanceled(filename);
       const dupe = DriveApp.getFolderById(processedFolderID).getFilesByName(filename).hasNext();
