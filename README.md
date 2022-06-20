@@ -43,6 +43,9 @@ If you're not an ardent 'Inbox Zero' follower, you'll likely want to create an e
 **Tags**<br>
 There is built-in support for 'p1, p2, p3' for priority level, and 'task' for connecting to Todoist. But you should try creating your own. You can even program your tags to act as buttons (long hold to send just the tag with no audio), enabling programmatic control of just about anything, anywhere. 
 
+**Canceling Recordings**<br>
+If you've already hit the record button (or are using auto record) and you want to cancel, just hold the square stop button down for 1 second. Note canceling means the recording will be discarded from your local device and not synced to Google Drive.
+
 ## Going Further
 Programmable Thoughts was originally conceived as a quick-entry thought organizer that could be tweaked to personal needs. But being essentially a simple voice/touch interface to Google Apps Script, it could really be a lot of things:
 
