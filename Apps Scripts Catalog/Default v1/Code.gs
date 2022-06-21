@@ -272,7 +272,8 @@ function processTags(filename, text, newTags, audioUrl) {
       if(element.toLowerCase() === supportedTags[i].toLowerCase()) {
         switch(element.toLowerCase()) { // Decide what to do for each supported tag
           case "task":
-            if (!text) break; // Skip adding a task if the transcription is empty
+            // Skip adding a task if the transcription is empty or if any of the required keys / IDs are null
+            if (!text || (taskIntegrationProvider == 1 && (!todoistTestKey || !todoistProjectID)) || (taskIntegrationProvider == 2 && (!notionInternalIntegrationToken || !notionPageID)) || !publishedUrl)  break;
             const result = JSON.parse(addTask(text, response.priority, audioUrl)); // Call the ToDoist API and store the result
             if (taskIntegrationProvider == 1 && result && result.id && result.id.toString().length > 0) { // If the result.id is populated, the Todoist task was added successfully
               emailSubjectModifiers.push("Task Added"); // Add email subject modifiers based on Todoist response
