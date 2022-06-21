@@ -18,6 +18,11 @@ const googleCloudSpeechToTextAPIKey = "";
 const todoistTestKey = ""; 
 // Replace with your own Todoist Project ID
 const todoistProjectID = ""; 
+// Create a new Notion Internal Integration Token and paste it here
+const notionInternalIntegrationToken = ""; 
+// Replace with your own Notion Page ID and make sure to share this page with your API Integration via the Share Button in Notion on this new page
+const notionPageID = ""; 
+const taskIntegrationProvider = 1; // 1 = Todoist, 2 = Notion
 // Replace with deployed web app 'dev' url
 // Using the 'dev' url is okay as you only need the url to work for your own Google account
 // The reason for using the 'dev' url rather than 'exec', is that the former url always points to HEAD
@@ -253,12 +258,12 @@ function isCanceled(filename) {
 function processTags(filename, text, newTags, audioUrl) {
   Logger.log("processTags filename: " + filename + " text: " + text + " newTags: " + newTags.join(', '));
   const response = {};
-  const emailSubjectModifiers = [];
+  var emailSubjectModifiers = [];
   const tags = splitTagsFromFilename(filename);
   if (newTags && newTags.length > 0) 
     for (var i = 0; i < newTags.length; i++) 
       tags.push(newTags[i]); // If any new tags are passed from doGet() actions, include those tags as they might not have been on the original filename
-  response.todoistPriority = 1; // Set default priority to the lowest
+  response.priority = 1; // Set default priority to the lowest
   response.origTags = [...tags]; // Return a shallow copy of the original tags
   Logger.log("Original tags: " + response.origTags.join(', '));
   const supportedTags = ["p1","p2","p3","task"]; // 'task' needs to be last in this array to receive updated priority metadata from the p1,p2,p3 tag processing based the structure of the for loops below
@@ -268,24 +273,41 @@ function processTags(filename, text, newTags, audioUrl) {
         switch(element.toLowerCase()) { // Decide what to do for each supported tag
           case "task":
             if (!text) break; // Skip adding a task if the transcription is empty
-            const result = JSON.parse(addTask(text, response.todoistPriority, audioUrl)); // Call the ToDoist API and store the result
-            if (result && result.id && result.id.toString().length > 0) { // If the result.id is populated, assume the task was added successfully
+            const result = JSON.parse(addTask(text, response.priority, audioUrl)); // Call the ToDoist API and store the result
+            if (taskIntegrationProvider == 1 && result && result.id && result.id.toString().length > 0) { // If the result.id is populated, the Todoist task was added successfully
               emailSubjectModifiers.push("Task Added"); // Add email subject modifiers based on Todoist response
+            } else if (taskIntegrationProvider == 2 && result && result.results && result.results.length > 0) { // If the results object length > 1, the Notion task was added successfully
+              emailSubjectModifiers.push("Task Added"); // Add email subject modifiers based on Notion response
             } else {
               emailSubjectModifiers.push("Task Failed");
             }
             break;
           case "p1":
-            emailSubjectModifiers.push("High Priority"); // Add reworded email subject modifiers
-            response.todoistPriority = 4;  // https://developer.todoist.com/rest/v1/#create-a-new-task
+            if (response.priority < 4) { // Only set the highest priority tag
+              response.priority = 4;
+              emailSubjectModifiers.push("High Priority"); // Add reworded email subject modifiers
+              emailSubjectModifiers = emailSubjectModifiers.filter(item => item !== "Medium Priority"); // Remove previously set lower priority email subject modifiers
+              emailSubjectModifiers = emailSubjectModifiers.filter(item => item !== "Low Priority");
+            } else if (response.priority == 1) {
+              response.priority = 4;
+              emailSubjectModifiers.push("High Priority"); // Add reworded email subject modifiers
+            } 
             break;
           case "p2":
-            emailSubjectModifiers.push("Medium Priority");
-            response.todoistPriority = 3;
+            if (response.priority < 3) { // Only set the highest priority tag
+              response.priority = 3;
+              emailSubjectModifiers.push("Medium Priority"); // Add reworded email subject modifiers
+              emailSubjectModifiers = emailSubjectModifiers.filter(item => item !== "Low Priority"); // Remove previously set lower priority email subject modifiers
+            } else if (response.priority == 1) {
+              response.priority = 3;
+              emailSubjectModifiers.push("Medium Priority"); // Add reworded email subject modifiers
+            } 
             break;
           case "p3":
-            emailSubjectModifiers.push("Low Priority");
-            response.todoistPriority = 2;
+            if (response.priority == 1) {
+              response.priority = 2;
+              emailSubjectModifiers.push("Low Priority"); // Add reworded email subject modifiers
+            }
             break;
         }
       }
@@ -305,26 +327,49 @@ function processTags(filename, text, newTags, audioUrl) {
   return response; // Return an object containing the transcribed text (as it's been potentially modified), array of subject line modifiers, the array of remaining unmatched tags
 }
 
-// Post a transcribed Thought as a Todoist task
+// Post a transcribed Thought as a Todoist or Notion task
 function addTask(task, priority, audioUrl) {
-  if (!todoistTestKey || !todoistProjectID || !publishedUrl) return;
+  if ((taskIntegrationProvider == 1 && (!todoistTestKey || !todoistProjectID)) || (taskIntegrationProvider == 2 && (!notionInternalIntegrationToken || !notionPageID)) || !publishedUrl) return;
   task = task.split('(')[0]; // Remove confidence text
   if (!task) return;
   Logger.log("Adding task: " + task);
-  const url = "https://api.todoist.com/rest/v1/tasks";
-  var data = {
-    'content': task,
-    'description': audioUrl,
-    'priority': priority,
-    'project_id': todoistProjectID,
-    'X-Request-Id': Utilities.getUuid()
-  };
+  const url = taskIntegrationProvider == 1 ? "https://api.todoist.com/rest/v1/tasks" : "https://api.notion.com/v1/blocks/" + notionPageID + "/children";
+  var data = {};
+  if (taskIntegrationProvider == 1) { // https://developer.todoist.com/rest/v1/#create-a-new-task
+    data = {
+      'content': task,
+      'description': audioUrl,
+      'priority': priority,
+      'project_id': todoistProjectID,
+      'X-Request-Id': Utilities.getUuid()
+    };
+  } else {
+    data = {
+      'children': [{
+        "object": "block",
+        "type": "to_do",
+        "to_do": {
+          "rich_text": [{
+            "type": "text",
+            "text": {
+              "content": task,
+              "link": {
+                "url" : audioUrl
+              }
+            }
+          }],
+          "color": priority == 4 ? "red" : priority == 3 ? "yellow" : priority == 2 ? "green" : "default"
+        }
+      }]
+    };
+  }
   var options = {
-    'method' : 'post',
+    'method' : (taskIntegrationProvider == 1 ? 'post' : 'patch'),
     'contentType': 'application/json',
     'payload' : JSON.stringify(data),
     'headers': {
-      'Authorization': 'Bearer ' + todoistTestKey
+      'Authorization': 'Bearer ' + (taskIntegrationProvider == 1 ? todoistTestKey : notionInternalIntegrationToken),
+      'Notion-Version' : '2021-08-16', // TODO Might need to be Notion-Version
     }
   };
   const response = UrlFetchApp.fetch(url, options);
