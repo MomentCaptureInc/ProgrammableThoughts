@@ -19,9 +19,9 @@ const todoistTestKey = "";
 // Replace with your own Todoist Project ID
 const todoistProjectID = ""; 
 // Replace with deployed web app 'dev' url
-// Using the 'dev' is okay as you only need the url to work for your own Google account
+// Using the 'dev' url is okay as you only need the url to work for your own Google account
 // The reason for using the 'dev' url rather than 'exec', is that the former url always points to HEAD
-// This means you won't need to constantly redeploy when you change the code). 
+// This means you won't need to constantly redeploy when you change the code. 
 // Hit the 'Deploy' button on the top right. Then select 'New Deployment', and under 'Select Type' choose web app, and then hit deploy (leave all config at defaults). 
 // Now hit the 'Deploy' button again, and select 'Test deployments'. Copy that url (ending with /dev) into the publishedUrl variable.
 const publishedUrl = ""; 
@@ -37,7 +37,7 @@ const masterSheetID = scriptProperties.getProperty("masterSheetID");
 // This is the first function that that needs to be run and serves three main purposes: 
 // 1. Approve the Oauth permissions request
 // 2. Create the necessary files and folder structure for the other functions in the script
-// 3. Create an Apps Script Trigger which runs the 'Rolling
+// 3. Create an Apps Script Trigger which runs the rollingProcess() function every minute
 // Before actually running, you'll be presented with an OAuth permissions request. This request covers all of the code in the script, not just the APIs used in the 'initialize' function
 function initialize() {
   if (!processedFolderID || !docFolderID || !thoughtFolderID || !masterSheetID) {  // Only run if this function hasn't been yet as these IDs are set inside this function
@@ -54,7 +54,7 @@ function initialize() {
       return;
     }
     Logger.log("Folders found: " + foldersArrayIDs.length);
-    const thoughtFolder = DriveApp.getFolderById(foldersArrayIDs[0]); // Arbitrarily use the first folder found. We'll be looking to improve this.
+    const thoughtFolder = DriveApp.getFolderById(foldersArrayIDs[0]); // Arbitrarily use the first folder found (most recently created). We'll be looking to improve this.
     thoughtFolder.addFile(scriptFile); // Move this Apps Script file into the folder
     DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(scriptFile); // Folders in Google Drive act more like tags, so you need to remove the 'Root Folder' tag
     scriptProperties.setProperty("thoughtFolderID", thoughtFolder.getId()); // Save the parent folder ID in a Script Property
