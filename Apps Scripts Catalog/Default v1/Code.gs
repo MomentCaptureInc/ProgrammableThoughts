@@ -370,7 +370,7 @@ function addTask(task, priority, audioUrl) {
     'payload' : JSON.stringify(data),
     'headers': {
       'Authorization': 'Bearer ' + (taskIntegrationProvider == 1 ? todoistTestKey : notionInternalIntegrationToken),
-      'Notion-Version' : '2021-08-16', // TODO Might need to be Notion-Version
+      'Notion-Version' : '2021-08-16'
     }
   };
   const response = UrlFetchApp.fetch(url, options);
