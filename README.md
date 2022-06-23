@@ -15,11 +15,11 @@ function myFunction() {
 ### Step 3. Choose a Programmable Thoughts Apps Script
 Choose one of the following Apps Scripts in the [Apps Scripts Catalog](Apps%20Scripts%20Catalog). You'll most likely want to start with [Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs), but if you are feeling a bit hesitant regarding Google OAuth permissions, try [Barebones v1](Apps%20Scripts%20Catalog/Barebones%20v1/Code.gs) to get a better idea of how this all fits together. Note that the latter script only sends a "Hello World" test email with a single scope permission.
 
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| Transcription | Emailed Thoughts | Tagging | Todoist / Notion Task Integration | Google Doc per Thought | Master Thought Spreadsheet |
-|--------------|:-------------:|:----------------:|:--------------------------:|:------------------------:|:----------------------:|:--------------------------:|
-| **[Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs)**   |       ✓       |         ✓        |              ✓             |             ✓            |            ✓           |              ✓             |
-| **[Barebones v1](Apps%20Scripts%20Catalog/Barebones%20v1/Code.gs)** |       -       |         -        |              -             |             -            |            -           |              -             |
-| ...          |               |                  |                            |                          |                        |                            |
+|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| Transcription | Emailed Thoughts | Tagging | Todoist / Notion Task Integration | Google Doc per Thought | Master Thought Spreadsheet | Push Notifications |
+|------------------------------------------|:-------------:|:----------------:|:-------:|:---------------------------------:|:----------------------:|:--------------------------:|:------------------:|
+| **[Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs)**                               |       ✓       |         ✓        |    ✓    |                 ✓                 |            ✓           |              ✓             |          ✓         |
+| **[Barebones v1](Apps%20Scripts%20Catalog/Barebones%20v1/Code.gs)**                             |       -       |         -        |    -    |                 -                 |            -           |              -             |          -         |
+| ...                                      |               |                  |         |                                   |                        |                            |                    |
 
 ### Step 4. Save, Authorize, and Run the Apps Script
 Once you've chosen a script, click the 'Copy raw contents' icon 
@@ -45,6 +45,9 @@ There is built-in support for 'p1, p2, p3' for priority level, and 'task' for co
 
 **Canceling Recordings**<br>
 If you've already hit the record button (or are using auto record) and you want to cancel, just hold the square stop button down for 1 second. Note canceling means the recording will be discarded from your local device and not synced to Google Drive.
+
+**Push Notifications**<br>
+Both the [iOS](https://apps.apple.com/app/programmable-thoughts/id1627115569) or [Android](https://play.google.com/store/apps/details?id=com.momentcaptureinc.programmablethoughts) apps support custom push notifications when using the [Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs) script. Just copy the "Push Key" from the app into the script, and you'll be able to send push notifications with `sendPush("Title", "Message")`. The default behavior for adding tasks uses a push notification to signal success rather than sending an email, but you can easily customize the behavior.
 
 ## Going Further
 Programmable Thoughts was originally conceived as a quick-entry thought organizer that could be tweaked to personal needs. But being essentially a simple voice/touch interface to Google Apps Script, it could really be a lot of things:
