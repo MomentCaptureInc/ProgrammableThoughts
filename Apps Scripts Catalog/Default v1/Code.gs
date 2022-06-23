@@ -13,7 +13,10 @@
 
 // Replace with your own Google Cloud API Key
 // Follow the instructions here - https://github.com/MomentCaptureInc/ProgrammableThoughts#step-5-optional-enable-audio-transcription
-const googleCloudSpeechToTextAPIKey = ""; 
+const googleCloudSpeechToTextAPIKey = "";
+// The 'pushKey' allows you to send push notifications to the Programmable Thoughts app.
+// It can be copied from the About page in the app. Click the hamburger menu on the top left and you'll see "Copy Push Key" on the bottom right.
+const pushKey = "";
 // Replace with your own Todoist Test API Key
 const todoistTestKey = ""; 
 // Replace with your own Todoist Project ID
@@ -206,10 +209,14 @@ function process() {
       htmlBody = displayHtmlText + tailHtmlmessage;
       const subject = (emailSubjectModifiers && emailSubjectModifiers.length > 0 ? emailSubjectModifiers.join(' / ') + " - " : "") + "Thought " + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
       // Send the Google Account an email containing the transcribed text and attached audio file
-      GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
-        htmlBody: htmlBody,
-        attachments: [thought.getBlob().setName(filename)]
-      });
+      if ((emailSubjectModifiers.includes("Task Added") && pushKey == "") || !emailSubjectModifiers.includes("Task Added")) { // Send a push notification rather than email when tasks are added successfully
+        GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
+          htmlBody: htmlBody,
+          attachments: [thought.getBlob().setName(filename)]
+        });
+      } else {
+        sendPush("Task Added", text);
+      }
       Logger.log("Processing complete");
     } else {
       Logger.log("No Thoughts to process");
@@ -372,6 +379,23 @@ function addTask(task, priority, audioUrl) {
       'Authorization': 'Bearer ' + (taskIntegrationProvider == 1 ? todoistTestKey : notionInternalIntegrationToken),
       'Notion-Version' : '2021-08-16'
     }
+  };
+  const response = UrlFetchApp.fetch(url, options);
+  Logger.log(response)
+  return response;
+}
+
+function sendPush(title, message) {
+  const url = "https://us-central1-programmable-thoughts.cloudfunctions.net/sendPushNotification";
+  var data = {
+      'title': title,
+      'message': message,
+      'pushkey': pushKey
+    };
+  var options = {
+    'method' : 'post',
+    'contentType': 'application/json',
+    'payload' : JSON.stringify(data)
   };
   const response = UrlFetchApp.fetch(url, options);
   Logger.log(response)
