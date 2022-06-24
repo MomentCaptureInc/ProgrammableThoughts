@@ -15,9 +15,9 @@ function myFunction() {
 ### Step 3. Choose a Programmable Thoughts Apps Script
 Choose one of the following Apps Scripts in the [Apps Scripts Catalog](Apps%20Scripts%20Catalog). You'll most likely want to start with [Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs), but if you are feeling a bit hesitant regarding Google OAuth permissions, try [Barebones v1](Apps%20Scripts%20Catalog/Barebones%20v1/Code.gs) to get a better idea of how this all fits together. Note that the latter script only sends a "Hello World" test email with a single scope permission.
 
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| Transcription | Emailed Thoughts | Tagging | Todoist / Notion Task Integration | Google Doc per Thought | Master Thought Spreadsheet | Push Notifications |
+|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| Transcription | Emailed Thoughts | Tagging | API Integrations | Google Doc per Thought | Master Thought Spreadsheet | Push Notifications |
 |------------------------------------------|:-------------:|:----------------:|:-------:|:---------------------------------:|:----------------------:|:--------------------------:|:------------------:|
-| **[Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs)**                               |       ✓       |         ✓        |    ✓    |                 ✓                 |            ✓           |              ✓             |          ✓         |
+| **[Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs)**                               |       ✓       |         ✓        |    ✓    |                 Todoist, Notion, Airtable                 |            ✓           |              ✓             |          ✓         |
 | **[Barebones v1](Apps%20Scripts%20Catalog/Barebones%20v1/Code.gs)**                             |       -       |         -        |    -    |                 -                 |            -           |              -             |          -         |
 | ...                                      |               |                  |         |                                   |                        |                            |                    |
 
@@ -41,7 +41,7 @@ There's no single answer to this, but the core concept relies on the ability to 
 If you're not an ardent 'Inbox Zero' follower, you'll likely want to create an email filter that adds a 'Thought' label, and also consider automatically marking the emails as read. That will quiet things down a bit.
 
 **Tags**<br>
-There is built-in support for 'p1, p2, p3' for priority level, and 'task' for connecting to [Todoist](https://todoist.com/) or [Notion](https://www.notion.so/). But you should try creating your own. You can even program your tags to act as buttons (long hold to send just the tag with no audio), enabling programmatic control of just about anything, anywhere. 
+There is built-in support for 'p1, p2, p3' for priority level, and 'task' for connecting to [Todoist](https://todoist.com/), [Notion](https://www.notion.so/), or [Airtable](https://airtable.com/). But you should try creating your own. You can even program your tags to act as buttons (long hold to send just the tag with no audio), enabling programmatic control of just about anything, anywhere. 
 
 **Canceling Recordings**<br>
 If you've already hit the record button (or are using auto record) and you want to cancel, just hold the square stop button down for 1 second. Note canceling means the recording will be discarded from your local device and not synced to Google Drive.
