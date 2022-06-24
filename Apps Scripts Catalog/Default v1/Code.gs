@@ -24,8 +24,15 @@ const todoistProjectID = "";
 // Create a new Notion Internal Integration Token and paste it here
 const notionInternalIntegrationToken = ""; 
 // Replace with your own Notion Page ID and make sure to share this page with your API Integration via the Share Button in Notion on this new page
-const notionPageID = ""; 
-const taskIntegrationProvider = 1; // 1 = Todoist, 2 = Notion
+const notionPageID = "";
+// Replace with your Airtable Base ID
+const airtableBaseID = "";
+// Replace with your Airtable API Key
+const airtableKey = "";
+// Replace with your Airtable endpoint
+const airtableTaskEndpoint = "";
+// 1 = Todoist, 2 = Notion, 3 = Airtable
+const taskIntegrationProvider = 1;
 // Replace with deployed web app 'dev' url
 // Using the 'dev' url is okay as you only need the url to work for your own Google account
 // The reason for using the 'dev' url rather than 'exec', is that the former url always points to HEAD
@@ -113,21 +120,17 @@ function initialize() {
 // This function is run every minute as defined by the trigger created in initialize()
 // It's main purpose is to prevent process() from being run concurrently
 function rollingProcess() {
-  try {
-    const now = new Date();
-    const processRunningString = scriptProperties.getProperty("processRunning");
-    const processRunning = processRunningString == null ? "false" : processRunningString.split(':')[0];
-    const processRunningTimestamp =processRunningString == null ? 0 : parseInt(processRunningString.split(':')[1]);
-    const diffMilliseconds = now.getTime() - processRunningTimestamp;
-    Logger.log("rollingProcess processRunning: " + processRunning + " diffMilliseconds: " + diffMilliseconds);
-    // Catch if the Script Property was 'stuck' true by checking if it's been > 6 minutes (the max Apps Script execution time)
-    if (processRunning != "true" || (processRunning == "true" && diffMilliseconds > 360000)) {
-       process();
-    } else {
-      Logger.log("process already running. Skipping.");
-    }
-  } catch (error) {
-    Logger.log(error.stack);
+  const now = new Date();
+  const processRunningString = scriptProperties.getProperty("processRunning");
+  const processRunning = processRunningString == null ? "false" : processRunningString.split(':')[0];
+  const processRunningTimestamp =processRunningString == null ? 0 : parseInt(processRunningString.split(':')[1]);
+  const diffMilliseconds = now.getTime() - processRunningTimestamp;
+  Logger.log("rollingProcess processRunning: " + processRunning + " diffMilliseconds: " + diffMilliseconds);
+  // Catch if the Script Property was 'stuck' == true by checking if it's been > 6 minutes (the max Apps Script execution time)
+  if (processRunning != "true" || (processRunning == "true" && diffMilliseconds > 360000)) {
+      process();
+  } else {
+    Logger.log("process already running. Skipping.");
   }
 }
 
@@ -140,8 +143,7 @@ function rollingProcess() {
 // 5. Sends an email to you containing the transcription (if available) and attaches the audio recording
 function process() {
   try {
-    const startTime = new Date();
-    scriptProperties.setProperty("processRunning", "true" + ":" + startTime.getTime().toString()); // Set the 'processRunning' Script Property to guarantee only 1 process() is running at a time
+    setProcessRunningProperty("true"); // Set the 'processRunning' Script Property to guarantee only 1 process() is running at a time
     const thoughtSpreadsheet = SpreadsheetApp.openById(masterSheetID);
     const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
     // Get a single Thought
@@ -154,80 +156,87 @@ function process() {
       const thoughtDateCreated = thought.getDateCreated();
       const thoughtDateCreatedDateObject = new Date(thoughtDateCreated);
       const sampleRate = filename.split('(').length > 1 && filename.split(')').length > 1 ? parseInt(filename.split('(')[1].split(')')[0]) : 44100; // Parse sample rate from filename
-      Logger.log("Processing Thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
       const canceled = isCanceled(filename);
       const dupe = DriveApp.getFolderById(processedFolderID).getFilesByName(filename).hasNext();
-      if (canceled || (dupe && DriveApp.getFolderById(processedFolderID).getFilesByName(filename).next().getSize() == thought.getSize())) {
+      if (canceled || (dupe && DriveApp.getFolderById(processedFolderID).getFilesByName(filename).next().getSize() == thought.getSize())) { // Catch dupes which may be sent by the app in case of an error
         Logger.log("Canceled: " + canceled + " Dupe: " + dupe);
         DriveApp.getFolderById(processedFolderID).addFile(thought);
         DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
-        const endTime = new Date();
-        scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString());
-        return;
-      }
-      const doc = DocumentApp.create(filename); // Every Thought has an associated Google Doc created
-      // The following chunk of code is building pieces of the email
-      const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
-      const docUrl = "https://docs.google.com/document/d/" + doc.getId();
-      const favoriteUrl = publishedUrl + "?id=" + thought.getId() + "&action=favorite";
-      const trashUrl = publishedUrl + "?id=" + thought.getId() + "&action=trash";
-      const taskUrl = publishedUrl + "?id=" + thought.getId() + "&action=task";
-      const audioLink = "<a href='" + audioUrl + "'>audio</a>";
-      const docLink = "<a href='" + docUrl + "'>doc</a>";
-      const favoriteLink = "<a href='" + favoriteUrl + "'>favorite</a>";
-      const trashLink = "<a href='" + trashUrl + "'>trash</a>";
-      const taskLink = "<a href='" + taskUrl + "'>task</a>";
-      var text = thought.getSize() > 20000 && googleCloudSpeechToTextAPIKey != "" ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 20KB
-      const processTagsResponse = processTags(filename, text, [], audioUrl); // Process tags appended to the filename
-      text = processTagsResponse.text; // Pick up any modifications from the tag processing
-      const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
-      const origTags = processTagsResponse.origTags;
-      if (text) doc.getBody().setText(text); // Add the transcribed text (if available) to the Google Doc
-      const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
-      const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
-      const data = [
-        thought.getId(),
-        filename,
-        thoughtDateCreated,
-        "https://drive.google.com/file/d/" + thought.getId() + "/view",
-        text,
-        "https://docs.google.com/document/d/" + doc.getId() 
-      ];
-      insertRow(thoughtMasterSheet, data, 2) // The above data is appended to the top of the Master Spreadsheet
-      DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId())); // Remove the 'Root Folder' tag
-      DriveApp.getFolderById(docFolderID).addFile(DriveApp.getFileById(doc.getId())); // Add the Google Doc to the 'Docs' folder
-      DriveApp.getFolderById(processedFolderID).addFile(thought); // Move the file into the processed folder 
-      DriveApp.getFolderById(thoughtFolderID).removeFile(thought); // Remove the file from the parent folder 
-      const thoughtSpreadsheetUrl = "https://docs.google.com/spreadsheets/d/" + thoughtSpreadsheet.getId();
-      const thoughtSpreadsheetLink = "<a href='" + thoughtSpreadsheetUrl + "'>All Thoughts</a>";
-      const tailMessage = `
-            
-
-      ${thoughtSpreadsheetUrl}`;
-      const tailHtmlmessage = "<br><br><br><br><br>" + thoughtSpreadsheetLink;
-      body = displayText + tailMessage;
-      htmlBody = displayHtmlText + tailHtmlmessage;
-      const subject = (emailSubjectModifiers && emailSubjectModifiers.length > 0 ? emailSubjectModifiers.join(' / ') + " - " : "") + "Thought " + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
-      // Send the Google Account an email containing the transcribed text and attached audio file
-      if ((emailSubjectModifiers.includes("Task Added") && pushKey == "") || !emailSubjectModifiers.includes("Task Added")) { // Send a push notification rather than email when tasks are added successfully
-        GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
-          htmlBody: htmlBody,
-          attachments: [thought.getBlob().setName(filename)]
-        });
+      } else if (filename.split('#')[0].includes("command")) { // Process 'Tag Commands' separately from regular Thoughts
+        Logger.log("Processing Tag Commands");
+        const processTagCommandsResponse = processTagCommands(filename); // Process 'Tag Commands' appended to the filename
+        DriveApp.getFolderById(processedFolderID).addFile(thought);
+        DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
       } else {
-        sendPush("Task Added", text);
+        Logger.log("Processing Thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
+        const doc = DocumentApp.create(filename); // Every Thought has an associated Google Doc created
+        // The following chunk of code is building pieces of the email
+        const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
+        const docUrl = "https://docs.google.com/document/d/" + doc.getId();
+        const favoriteUrl = publishedUrl + "?id=" + thought.getId() + "&action=favorite";
+        const trashUrl = publishedUrl + "?id=" + thought.getId() + "&action=trash";
+        const taskUrl = publishedUrl + "?id=" + thought.getId() + "&action=task";
+        const audioLink = "<a href='" + audioUrl + "'>audio</a>";
+        const docLink = "<a href='" + docUrl + "'>doc</a>";
+        const favoriteLink = "<a href='" + favoriteUrl + "'>favorite</a>";
+        const trashLink = "<a href='" + trashUrl + "'>trash</a>";
+        const taskLink = "<a href='" + taskUrl + "'>task</a>";
+        var text = thought.getSize() > 20000 && googleCloudSpeechToTextAPIKey ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 20KB
+        const processTagsResponse = processTags(filename, text, [], audioUrl); // Process tags appended to the filename
+        text = processTagsResponse.text; // Pick up any modifications from the tag processing
+        const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
+        const origTags = processTagsResponse.origTags;
+        if (text) doc.getBody().setText(text); // Add the transcribed text (if available) to the Google Doc
+        const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
+        const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
+        const data = [
+          thought.getId(),
+          filename,
+          thoughtDateCreated,
+          "https://drive.google.com/file/d/" + thought.getId() + "/view",
+          text,
+          "https://docs.google.com/document/d/" + doc.getId() 
+        ];
+        insertRow(thoughtMasterSheet, data, 2) // The above data is appended to the top of the Master Spreadsheet
+        DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId())); // Remove the 'Root Folder' tag
+        DriveApp.getFolderById(docFolderID).addFile(DriveApp.getFileById(doc.getId())); // Add the Google Doc to the 'Docs' folder
+        DriveApp.getFolderById(processedFolderID).addFile(thought); // Move the file into the processed folder 
+        DriveApp.getFolderById(thoughtFolderID).removeFile(thought); // Remove the file from the parent folder 
+        const thoughtSpreadsheetUrl = "https://docs.google.com/spreadsheets/d/" + thoughtSpreadsheet.getId();
+        const thoughtSpreadsheetLink = "<a href='" + thoughtSpreadsheetUrl + "'>All Thoughts</a>";
+        const tailMessage = `
+              
+
+        ${thoughtSpreadsheetUrl}`;
+        const tailHtmlmessage = "<br><br><br><br><br>" + thoughtSpreadsheetLink;
+        body = displayText + tailMessage;
+        htmlBody = displayHtmlText + tailHtmlmessage;
+        const subject = (emailSubjectModifiers && emailSubjectModifiers.length > 0 ? emailSubjectModifiers.join(' / ') + " - " : "") + "Thought " + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
+        // Send the Google Account an email containing the transcribed text and attached audio file
+        if ((emailSubjectModifiers.includes("Task Added") && pushKey == "") || !emailSubjectModifiers.includes("Task Added")) { // Send a push notification rather than email when tasks are added successfully
+          GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
+            htmlBody: htmlBody,
+            attachments: [thought.getBlob().setName(filename)]
+          });
+        } else {
+          sendPush("Task Added", text);
+        }
+        Logger.log("Processing complete");
       }
-      Logger.log("Processing complete");
     } else {
       Logger.log("No Thoughts to process");
     }
-    const endTime = new Date();
-    scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString()); // Reset the 'processRunning' flag and add the current timestamp
+    setProcessRunningProperty("false"); // Reset the 'processRunning' flag and add the current timestamp
   } catch (error) {
-    const endTime = new Date();
-    scriptProperties.setProperty("processRunning", "false" + ":" + endTime.getTime().toString()); // If there are any exceptions, we still reset the 'processRunning' flag and add the current timestamp
+    setProcessRunningProperty("false"); // If there are any exceptions, we still reset the 'processRunning' flag and add the current timestamp
     Logger.log(error.stack);
   }
+}
+
+// Helper function for setting the 'processRunning' property
+function setProcessRunningProperty(running) {
+  const now = new Date();
+  scriptProperties.setProperty("processRunning", running.toString() + ":" + now.getTime().toString()); // Reset the 'processRunning' flag and add the current timestamp
 }
 
 // Takes a filename and outputs an array of tags
@@ -259,7 +268,7 @@ function isCanceled(filename) {
   return canceled;
 }
 
-// Iterate through the uploaded tags (on both files with recordings and ones without - ie. 'Tag Commands')
+// Iterate through the uploaded tags on files with audio recordings
 // Each supported tag may trigger unique behavior and has its own case/switch code block
 // All unmatched tags are returned in a new array and also added to the email subject line 
 function processTags(filename, text, newTags, audioUrl) {
@@ -280,11 +289,15 @@ function processTags(filename, text, newTags, audioUrl) {
         switch(element.toLowerCase()) { // Decide what to do for each supported tag
           case "task":
             // Skip adding a task if the transcription is empty or if any of the required keys / IDs are null
-            if (!text || (taskIntegrationProvider == 1 && (!todoistTestKey || !todoistProjectID)) || (taskIntegrationProvider == 2 && (!notionInternalIntegrationToken || !notionPageID)) || !publishedUrl)  break;
+            if (!text || !publishedUrl || (taskIntegrationProvider == 1 && (!todoistTestKey || !todoistProjectID)) 
+            || (taskIntegrationProvider == 2 && (!notionInternalIntegrationToken || !notionPageID))
+            || (taskIntegrationProvider == 3 && (!airtableKey || !airtableBaseID || !airtableTaskEndpoint)))  break;
             const result = JSON.parse(addTask(text, response.priority, audioUrl)); // Call the ToDoist API and store the result
             if (taskIntegrationProvider == 1 && result && result.id && result.id.toString().length > 0) { // If the result.id is populated, the Todoist task was added successfully
               emailSubjectModifiers.push("Task Added"); // Add email subject modifiers based on Todoist response
             } else if (taskIntegrationProvider == 2 && result && result.results && result.results.length > 0) { // If the results object length > 1, the Notion task was added successfully
+              emailSubjectModifiers.push("Task Added"); // Add email subject modifiers based on Notion response
+            } else if (taskIntegrationProvider == 3 && result && result.records && result.records.length > 0 && result.records[0].id && result.records[0].id.toString().length > 0) { // If the record ID is populated, the Airtable task was added successfully
               emailSubjectModifiers.push("Task Added"); // Add email subject modifiers based on Notion response
             } else {
               emailSubjectModifiers.push("Task Failed");
@@ -335,13 +348,44 @@ function processTags(filename, text, newTags, audioUrl) {
   return response; // Return an object containing the transcribed text (as it's been potentially modified), array of subject line modifiers, the array of remaining unmatched tags
 }
 
-// Post a transcribed Thought as a Todoist or Notion task
+// Iterate through the 'Tag Commands'
+// Each supported tag command may trigger unique behavior and has its own case/switch code block
+// All unmatched 'Tag Commands' are returned in a new array
+function processTagCommands(filename) {
+  const response = {};
+  const tagCommands = splitTagsFromFilename(filename);
+  response.origTagCommands = [...tagCommands]; // Return a shallow copy of the original 'Tag Commands'
+  Logger.log("Original Tag Commands: " + response.origTagCommands.join(', '));
+  const supportedTagCommands = ["TBD"];
+  for (var i = 0; i < supportedTagCommands.length; i++) {
+    const index = tagCommands.findIndex(element => { // findIndex allows us to use a function to compare elements with toLowerCase() to ensure we don't miss a tag due to case differences
+      if(element.toLowerCase() === supportedTagCommands[i].toLowerCase()) {
+        switch(element.toLowerCase()) { // Decide what to do for each supported tag
+          case "TBD":
+            // Placeholder
+            break;
+        }
+      }
+      return element.toLowerCase() === supportedTagCommands[i].toLowerCase(); // Necessary for the index to return the actual index
+    });
+    if (index !== -1) {
+      tagCommands.splice(index, 1); // Remove the found supported tag command from the tag command list based on the element's index. The '1' in the splice() function means we're removing just 1 item.
+    }
+  }
+  Logger.log("Unmatched Tag Commands: " + tagCommands.join(', ')); // Due to the splice() above, tagCommands now only has unmatched entries
+  response.unmatchedTagCommands = tagCommands;
+  return response; // Return an object containing the unmatched 'Tag Commands' and the original set for reference
+}
+
+// Post a transcribed Thought as a Todoist, Notion, or Airtable task
 function addTask(task, priority, audioUrl) {
-  if ((taskIntegrationProvider == 1 && (!todoistTestKey || !todoistProjectID)) || (taskIntegrationProvider == 2 && (!notionInternalIntegrationToken || !notionPageID)) || !publishedUrl) return;
+  if (!publishedUrl || (taskIntegrationProvider == 1 && (!todoistTestKey || !todoistProjectID)) 
+  || (taskIntegrationProvider == 2 && (!notionInternalIntegrationToken || !notionPageID))
+  || (taskIntegrationProvider == 3 && (!airtableKey || !airtableBaseID || !airtableTaskEndpoint))) return;
   task = task.split('(')[0]; // Remove confidence text
   if (!task) return;
   Logger.log("Adding task: " + task);
-  const url = taskIntegrationProvider == 1 ? "https://api.todoist.com/rest/v1/tasks" : "https://api.notion.com/v1/blocks/" + notionPageID + "/children";
+  const url = taskIntegrationProvider == 1 ? "https://api.todoist.com/rest/v1/tasks" : taskIntegrationProvider == 2 ? "https://api.notion.com/v1/blocks/" + notionPageID + "/children" : "https://api.airtable.com/v0/" + airtableBaseID + "/" + airtableTaskEndpoint;
   var data = {};
   if (taskIntegrationProvider == 1) { // https://developer.todoist.com/rest/v1/#create-a-new-task
     data = {
@@ -351,7 +395,7 @@ function addTask(task, priority, audioUrl) {
       'project_id': todoistProjectID,
       'X-Request-Id': Utilities.getUuid()
     };
-  } else {
+  } else if (taskIntegrationProvider == 2) { // https://developers.notion.com/docs/working-with-page-content#appending-blocks-to-a-page
     data = {
       'children': [{
         "object": "block",
@@ -370,13 +414,26 @@ function addTask(task, priority, audioUrl) {
         }
       }]
     };
+  } else if (taskIntegrationProvider == 3) { // https://airtable.com/api
+    data = {
+      "records": [
+        {
+          "fields": {
+            "Name": task,
+            "Status": "To do",
+            "Priority": priority == 4 ? "High" : priority == 3 ? "Medium" : priority == 2 ? "Low" : "",
+            "Audio": audioUrl
+          }
+        },
+      ]
+    };
   }
   var options = {
-    'method' : (taskIntegrationProvider == 1 ? 'post' : 'patch'),
+    'method' : (taskIntegrationProvider != 2 ? 'post' : 'patch'),
     'contentType': 'application/json',
     'payload' : JSON.stringify(data),
     'headers': {
-      'Authorization': 'Bearer ' + (taskIntegrationProvider == 1 ? todoistTestKey : notionInternalIntegrationToken),
+      'Authorization': 'Bearer ' + (taskIntegrationProvider == 1 ? todoistTestKey : taskIntegrationProvider == 2 ? notionInternalIntegrationToken : airtableKey),
       'Notion-Version' : '2021-08-16'
     }
   };
@@ -386,6 +443,7 @@ function addTask(task, priority, audioUrl) {
 }
 
 function sendPush(title, message) {
+  Logger.log("Sending push notification with title: " + title + " message: " + message);
   const url = "https://us-central1-programmable-thoughts.cloudfunctions.net/sendPushNotification";
   var data = {
       'title': title,
