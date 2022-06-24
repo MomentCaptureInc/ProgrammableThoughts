@@ -421,7 +421,7 @@ function addTask(task, priority, audioUrl) {
           "fields": {
             "Name": task,
             "Status": "To do",
-            "Priority": priority == 4 ? "High" : priority == 3 ? "Medium" : priority == 2 ? "Low" : "",
+            "Priority": priority == 4 ? "High" : priority == 3 ? "Medium" : priority == 2 ? "Low" : "Low",
             "Audio": audioUrl
           }
         },
