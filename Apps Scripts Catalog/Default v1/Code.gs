@@ -77,9 +77,9 @@ function initialize() {
     scriptProperties.setProperty("docFolderID", thoughtFolder.createFolder("Docs").getId()); // Create a 'Docs' folder and store the ID in a Script Property
     // Create a new Google Spreadsheet which will act as a database of all Thoughts
     // Configure the formatting and add a header
-    const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 7);
-    const entireSheetRange = masterSheet.getRange("A1:G2");
-    const headerRange = masterSheet.getRange("A1:G1");
+    const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 8);
+    const entireSheetRange = masterSheet.getRange("A1:H2");
+    const headerRange = masterSheet.getRange("A1:H1");
     const transcribedRange = masterSheet.getRange("E1:E");
     masterSheet.setFrozenRows(1);
     entireSheetRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
@@ -97,7 +97,8 @@ function initialize() {
       "Audio",
       "Text",
       "Doc",
-      "Favorite"
+      "Favorite",
+      "Tags"
     ]]);
     const now = new Date();
     // Create a Script Property that keeps track of whether the 'rollingProcess' function is running
@@ -195,7 +196,9 @@ function process() {
           thoughtDateCreated,
           "https://drive.google.com/file/d/" + thought.getId() + "/view",
           text,
-          "https://docs.google.com/document/d/" + doc.getId() 
+          "https://docs.google.com/document/d/" + doc.getId(),
+          "",
+          origTags.join(",")
         ];
         insertRow(thoughtMasterSheet, data, 2) // The above data is appended to the top of the Master Spreadsheet
         DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId())); // Remove the 'Root Folder' tag
