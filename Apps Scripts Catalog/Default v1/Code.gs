@@ -46,8 +46,11 @@ const scriptProperties = PropertiesService.getScriptProperties(); // Script prop
 // Get the Google Drive File IDs of various folders / documents the script needs
 const processedFolderID = scriptProperties.getProperty("processedFolderID");
 const docFolderID = scriptProperties.getProperty("docFolderID");
+const tagFolderID = scriptProperties.getProperty("tagFolderID");
 const thoughtFolderID = scriptProperties.getProperty("thoughtFolderID");
-const masterSheetID = scriptProperties.getProperty("masterSheetID");
+const masterSpreadsheetFileID = scriptProperties.getProperty("masterSpreadsheetFileID");
+const masterSpreadsheetThoughtSheetID = scriptProperties.getProperty("masterSpreadsheetThoughtSheetID");
+const masterSpreadsheetTagSheetID = scriptProperties.getProperty("masterSpreadsheetTagSheetID");
 
 // This is the first function that that needs to be run and serves three main purposes: 
 // 1. Approve the Oauth permissions request
@@ -55,7 +58,7 @@ const masterSheetID = scriptProperties.getProperty("masterSheetID");
 // 3. Create an Apps Script Trigger which runs the rollingProcess() function every minute
 // Before actually running, you'll be presented with an OAuth permissions request. This request covers all of the code in the script, not just the APIs used in the 'initialize' function
 function initialize() {
-  if (!processedFolderID || !docFolderID || !thoughtFolderID || !masterSheetID) {  // Only run if this function hasn't been yet as these IDs are set inside this function
+  if (!processedFolderID || !docFolderID || !tagFolderID || !thoughtFolderID || !masterSpreadsheetFileID) {  // Only run if this function hasn't been yet as these IDs are set inside this function
     Logger.log("Initializing");
     const scriptFile = DriveApp.getFileById(ScriptApp.getScriptId()); // Get a file reference to this script
     scriptFile.setName("Programmable Thoughts Script"); // Rename it from the default 'Untitled'
@@ -75,6 +78,7 @@ function initialize() {
     scriptProperties.setProperty("thoughtFolderID", thoughtFolder.getId()); // Save the parent folder ID in a Script Property
     scriptProperties.setProperty("processedFolderID", thoughtFolder.createFolder("Processed").getId()); // Create a 'Processed' folder and store the ID in a Script Property
     scriptProperties.setProperty("docFolderID", thoughtFolder.createFolder("Docs").getId()); // Create a 'Docs' folder and store the ID in a Script Property
+    scriptProperties.setProperty("tagFolderID", thoughtFolder.createFolder("Tags").getId()); // Create a 'Tags' folder and store the ID in a Script Property
     // Create a new Google Spreadsheet which will act as a database of all Thoughts
     // Configure the formatting and add a header
     const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 8);
@@ -82,6 +86,8 @@ function initialize() {
     const headerRange = masterSheet.getRange("A1:H1");
     const transcribedRange = masterSheet.getRange("E1:E");
     masterSheet.setFrozenRows(1);
+    masterSheet.getActiveSheet().setName("Thoughts");
+    scriptProperties.setProperty("masterSpreadsheetThoughtSheetID", masterSheet.getActiveSheet().getSheetId());
     entireSheetRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
     entireSheetRange.setHorizontalAlignment("left");
     transcribedRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
@@ -100,12 +106,30 @@ function initialize() {
       "Favorite",
       "Tags"
     ]]);
+    const masterTagSheet = masterSheet.insertSheet("Tags");
+    masterTagSheet.deleteColumns(4, masterTagSheet.getMaxColumns() - 3);
+    masterTagSheet.deleteRows(4, masterTagSheet.getMaxRows() - 3);
+    const entireTagSheetRange = masterTagSheet.getRange("A1:C2");
+    entireTagSheetRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+    entireTagSheetRange.setHorizontalAlignment("left");
+    masterTagSheet.setFrozenRows(1);
+    scriptProperties.setProperty("masterSpreadsheetTagSheetID", masterTagSheet.getSheetId());
+    const tagsHeaderRange = masterTagSheet.getRange("A1:C1");
+    tagsHeaderRange.setVerticalAlignment("middle");
+    tagsHeaderRange.setHorizontalAlignment("center");
+    tagsHeaderRange.setFontSize("14");
+    tagsHeaderRange.setFontWeight("bold");
+    tagsHeaderRange.setValues([[
+      "Tag",
+      "ID",
+      "Doc"
+    ]]);
     const now = new Date();
     // Create a Script Property that keeps track of whether the 'rollingProcess' function is running
     // Also add a millisecond timestamp counted from the ECMAScript epoch (January 1, 1970, UTC)
     // This timestamp is used to rescue the 'rollingProcess' trigger if it ever has an exception that prevents it from setting processRunning = false (ie. manually aborting it in the Script Editor GUI)
     scriptProperties.setProperty("processRunning", "false" + ":" + now.getTime().toString());
-    scriptProperties.setProperty("masterSheetID", masterSheet.getId()); // Store the master spreadsheet file ID in a Script Property
+    scriptProperties.setProperty("masterSpreadsheetFileID", masterSheet.getId()); // Store the master spreadsheet file ID in a Script Property
     thoughtFolder.addFile(DriveApp.getFileById(masterSheet.getId())); // Add the master spreadsheet to the 'Programmable Thoughts' folder
     DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(masterSheet.getId())); // Remove the 'Root Folder' tag
     ScriptApp.newTrigger('rollingProcess') // Create a new Apps Script Trigger that runs the 'rollingProcess' function every minute
@@ -145,8 +169,8 @@ function rollingProcess() {
 function process() {
   try {
     setProcessRunningProperty("true"); // Set the 'processRunning' Script Property to guarantee only 1 process() is running at a time
-    const thoughtSpreadsheet = SpreadsheetApp.openById(masterSheetID);
-    const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
+    const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
+    const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetThoughtSheetID);
     // Get a single Thought
     // This currently functions as LIFO which is maybe not ideal in all situations.
     // For cases where there are unsynced Thoughts being uploaded + new Thoughts, preference should probably go to do the newest ones first, so LIFO makes sense. But it is debatable.
@@ -187,7 +211,48 @@ function process() {
         text = processTagsResponse.text; // Pick up any modifications from the tag processing
         const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
         const origTags = processTagsResponse.origTags;
-        if (text) doc.getBody().setText(text); // Add the transcribed text (if available) to the Google Doc
+        if (text) {
+          const docBody = doc.getBody(); // Add the transcribed text (if available) to the Google Doc
+          const docText = docBody.insertParagraph(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ");
+          const docAudioLink = docText.appendText("Audio").setLinkUrl(audioUrl);
+          docAudioLink.merge();
+          if (origTags && origTags.length > 0) {
+            const thoughtTagSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetTagSheetID);
+            const thoughtTagValues = thoughtTagSheet.getDataRange().getValues();
+            for (var i = 0; i < origTags.length; i++) { // Iterate through all tags and add them to the tag sheet if they are new
+              var rowID = -1;
+              var tagDoc;
+              for (var x = 1; x < thoughtTagValues.length; x++) {
+                if (origTags[i] == thoughtTagValues[x][0]) {
+                  tagDoc = DocumentApp.openById(thoughtTagValues[x][1]);
+                  rowID = x;
+                  break;
+                }
+              }
+              if (rowID == -1) { // Create a new doc as this is a new tag
+                tagDoc = DocumentApp.create(origTags[i]);
+                const tagDocUrl = "https://docs.google.com/document/d/" + tagDoc.getId();
+                const tagData = [
+                  origTags[i],
+                  tagDoc.getId(),
+                  tagDocUrl
+                ];
+                insertRow(thoughtTagSheet, tagData, 2) // The above data is appended to the top of the Tag sheet
+                DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(tagDoc.getId())); // Remove the 'Root Folder' tag
+                DriveApp.getFolderById(tagFolderID).addFile(DriveApp.getFileById(tagDoc.getId())); // Add the Google Doc to the 'Tags' folder
+              }
+              // Add the transcribed text and audio link to the tag doc
+              const tagDocBody = tagDoc.getBody();
+              const tagText = tagDocBody.insertListItem(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);              
+              const tagAudioLink = tagText.appendText("Audio").setLinkUrl(audioUrl);
+              tagAudioLink.merge();
+              const tagSeparator = tagText.appendText(" / ").setLinkUrl("");
+              tagSeparator.merge();
+              const tagDocLink = tagText.appendText("Doc").setLinkUrl(docUrl);
+              tagDocLink.merge();
+            }
+          }
+        }
         const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
         const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
         const data = [
@@ -375,6 +440,32 @@ function processTagCommands(filename) {
       tagCommands.splice(index, 1); // Remove the found supported tag command from the tag command list based on the element's index. The '1' in the splice() function means we're removing just 1 item.
     }
   }
+  // Send an email report containing all Thoughts for the unmatched Tag Commands
+  if (tagCommands && tagCommands.length > 0) {
+    const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
+    const thoughtTagSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetTagSheetID);
+    const thoughtTagValues = thoughtTagSheet.getDataRange().getValues();
+    for (var i = 0; i < tagCommands.length; i++) {
+      var tagDocID;
+      for (var x = 1; x < thoughtTagValues.length; x++) {
+        if (tagCommands[i] == thoughtTagValues[x][0]) {
+          tagDocID = thoughtTagValues[x][1];
+          break;
+        }
+      }
+      if (tagDocID) {
+        const url = "https://docs.google.com/feeds/download/documents/export/Export?id="+tagDocID+"&exportFormat=html";
+        const param = {
+          method: "get",
+          headers: {"Authorization": "Bearer " + ScriptApp.getOAuthToken()},
+          muteHttpExceptions:true,
+        };
+        GmailApp.sendEmail(Session.getActiveUser().getEmail(), "Tag Report: " + tagCommands[i], "", {
+          htmlBody: UrlFetchApp.fetch(url, param).getContentText()
+        });
+      }
+    }
+  }
   Logger.log("Unmatched Tag Commands: " + tagCommands.join(', ')); // Due to the splice() above, tagCommands now only has unmatched entries
   response.unmatchedTagCommands = tagCommands;
   return response; // Return an object containing the unmatched 'Tag Commands' and the original set for reference
@@ -552,9 +643,9 @@ function paddedDate(date) {
 
 // Google Apps Script doesn't have a way to get a Google Spreadsheet's sheet by its ID (only by name) - https://issuetracker.google.com/issues/36759083
 function getSheetById(spreadsheet,id) {
-  if (!processedFolderID || !docFolderID || !thoughtFolderID || !masterSheetID) return;
+  if (!processedFolderID || !docFolderID || !tagFolderID || !thoughtFolderID || !masterSpreadsheetFileID) return;
   return spreadsheet.getSheets().filter(
-    function(s) {return s.getSheetId() === id;}
+    function(s) {return s.getSheetId() == id;}
   )[0];
 }
 
@@ -567,8 +658,8 @@ function doGet(e) {
   const action = e.parameter.action ? decodeURI(e.parameter.action).toString() : "";
   const id = e.parameter.id ? decodeURI(e.parameter.id).toString() : "";
   if (action && id) {
-    const thoughtSpreadsheet = SpreadsheetApp.openById(masterSheetID);
-    const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, 0);
+    const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
+    const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetThoughtSheetID);
     const thoughtData = thoughtMasterSheet.getDataRange().getValues();
     var message;
     switch(action) {
