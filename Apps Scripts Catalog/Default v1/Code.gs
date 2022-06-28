@@ -454,14 +454,17 @@ function processTagCommands(filename) {
         }
       }
       if (tagDocID) {
-        const url = "https://docs.google.com/feeds/download/documents/export/Export?id="+tagDocID+"&exportFormat=html";
+        const url = "https://docs.google.com/feeds/download/documents/export/Export?id="+tagDocID+"&exportFormat=pdf";
         const param = {
           method: "get",
           headers: {"Authorization": "Bearer " + ScriptApp.getOAuthToken()},
           muteHttpExceptions:true,
         };
-        GmailApp.sendEmail(Session.getActiveUser().getEmail(), "Tag Report: " + tagCommands[i], "", {
-          htmlBody: UrlFetchApp.fetch(url, param).getContentText()
+        const response = UrlFetchApp.fetch(url, param);
+        const blob = response.getBlob().setName("Tag Report - " + tagCommands[i] + ".pdf");
+        GmailApp.sendEmail(Session.getActiveUser().getEmail(), "Tag Report - " + tagCommands[i], "", {
+          htmlBody: "",
+          attachments: [blob]
         });
       }
     }
