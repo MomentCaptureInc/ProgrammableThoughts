@@ -1,6 +1,23 @@
 # Programmable Thoughts
 Welcome to the Programmable Thoughts GitHub repo. We're just getting started ourselves, but the information below should be enough to get you going. We hope to soon expand both the functionality of the currently offered Apps Scripts, as well as increase the number of scripts through outside contributions. Note that all contributions will be thoroughly tested and validated before being added to the `master` branch's [Apps Script Catalog](Apps%20Scripts%20Catalog). See the [Trust and Validation](README.md#trust-and-validation) section below for more info.
 
+### How Everything Fits Together
+There are two main pieces that make up "Programmable Thoughts". First, the [iOS](https://apps.apple.com/app/programmable-thoughts/id1627115569) / [Android](https://play.google.com/store/apps/details?id=com.momentcaptureinc.programmablethoughts) apps which are simply a voice recorder + tagger that uploads to Google Drive. And second, the backend Google Apps Script (owned, operated, editable by your Google Account—minimizing privacy / security concerns) which handles the transcription, tag logic, email sending, etc. Below is a simplified overview of the app and script flow based on the [Default v1](Apps%20Scripts%20Catalog/Default%20v1/Code.gs) script:
+
+1. You record a voice note (ie. a Thought) up to 60 seconds in length
+    * Before / during recording, you can tag the Thought with one or more user-defined strings
+3. The audio file (with the tags written into the filename) are uploaded to your Google Drive in a new folder called "Programmable Thoughts"
+4. Every 60 seconds the script checks for new uploads to the "Programmable Thoughts" folder
+5. Audio is transcribed via Google Cloud Speech-to-Text (if configured)
+6. Tag Commands are parsed
+    * Currently the only functionality built-in is to send an email report for the sent Tag Command
+8. Regular Tags are parsed
+    * Some tag names ("p1,p2,p3,task") have pre-defined logic
+    * All others tags just get written into the email and spreadsheet
+10. Insert a record into the "Programmable Thoughts Data" spreadsheet which has a record and metadata for each Thought
+11. Send you an email that contains the audio file, transcription, tags, and special links that allow you to take specific actions (ie. add a task, favorite, trash)
+
+
 ## Getting Started
 ### Step 1. Download the App
 After downloading either the [iOS](https://apps.apple.com/app/programmable-thoughts/id1627115569) or [Android](https://play.google.com/store/apps/details?id=com.momentcaptureinc.programmablethoughts) apps and authorizing Google Drive access to "See, edit, create, and delete only the specific Google Drive files you use with this app" provided by the [https://www.googleapis.com/auth/drive.file](https://developers.google.com/identity/protocols/oauth2/scopes#drive) OAuth scope, proceed to Step 2. Note that you can actually use any voice recording app that can sync to Google Drive, but the official apps are built from the ground up with this use-case in mind and will likely grow to support additional features of the Apps Scripts.
