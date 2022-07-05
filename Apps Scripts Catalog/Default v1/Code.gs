@@ -580,7 +580,8 @@ function speechToText(file, sampleRate) {
         "sampleRateHertz": sampleRate,
         "languageCode": "en-US",
         "enableAutomaticPunctuation": true,
-        "model": "default"
+        "model": "video",
+        "useEnhanced": true
     },
     "audio": {
         "content": Utilities.base64Encode(file.getBlob().getBytes()) // Base64 encoded data has a 60 second / 10MB limitation - https://cloud.google.com/speech-to-text/docs/base64-encoding
