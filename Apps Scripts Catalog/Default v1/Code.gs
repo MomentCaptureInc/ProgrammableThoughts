@@ -39,7 +39,7 @@ const taskIntegrationProvider = 1;
 // This means you won't need to constantly redeploy when you change the code. 
 // Hit the 'Deploy' button on the top right. Then select 'New Deployment', and under 'Select Type' choose web app, and then hit deploy (leave all config at defaults). 
 // Now hit the 'Deploy' button again, and select 'Test deployments'. Copy that url (ending with /dev) into the publishedUrl variable.
-const publishedUrl = ""; 
+const publishedUrl = ""; // Unfortunatley can't reliably use ScriptApp.getService().getUrl() due to https://issuetracker.google.com/issues/170799249?pli=1
 
 const speechUrl = "https://speech.googleapis.com/v1p1beta1/"; // Google Cloud Speech-to-Text API endpoint https://cloud.google.com/speech-to-text/docs/reference/rest/v1p1beta1/speech/recognize
 const scriptProperties = PropertiesService.getScriptProperties(); // Script properties are scoped to this script 
@@ -51,6 +51,7 @@ const thoughtFolderID = scriptProperties.getProperty("thoughtFolderID");
 const masterSpreadsheetFileID = scriptProperties.getProperty("masterSpreadsheetFileID");
 const masterSpreadsheetThoughtSheetID = scriptProperties.getProperty("masterSpreadsheetThoughtSheetID");
 const masterSpreadsheetTagSheetID = scriptProperties.getProperty("masterSpreadsheetTagSheetID");
+const indexHtmlFilename = "index";
 
 // This is the first function that that needs to be run and serves three main purposes: 
 // 1. Approve the Oauth permissions request
@@ -81,9 +82,9 @@ function initialize() {
     scriptProperties.setProperty("tagFolderID", thoughtFolder.createFolder("Tags").getId()); // Create a 'Tags' folder and store the ID in a Script Property
     // Create a new Google Spreadsheet which will act as a database of all Thoughts
     // Configure the formatting and add a header
-    const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 8);
-    const entireSheetRange = masterSheet.getRange("A1:H2");
-    const headerRange = masterSheet.getRange("A1:H1");
+    const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 9);
+    const entireSheetRange = masterSheet.getRange("A1:I2");
+    const headerRange = masterSheet.getRange("A1:I1");
     const transcribedRange = masterSheet.getRange("E1:E");
     masterSheet.setFrozenRows(1);
     masterSheet.getActiveSheet().setName("Thoughts");
@@ -104,7 +105,8 @@ function initialize() {
       "Text",
       "Doc",
       "Favorite",
-      "Tags"
+      "Tags",
+      "Edited"
     ]]);
     const masterTagSheet = masterSheet.insertSheet("Tags");
     masterTagSheet.deleteColumns(4, masterTagSheet.getMaxColumns() - 3);
@@ -195,18 +197,27 @@ function process() {
       } else {
         Logger.log("Processing Thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
         const doc = DocumentApp.create(filename); // Every Thought has an associated Google Doc created
+        let indexHtmlTemplate;
+        try {
+          indexHtmlTemplate = HtmlService.createTemplateFromFile(indexHtmlFilename); // Create template from the indexHtmlFilename so we can conditionally chose to include 'edit' functionality
+        } catch (error) {
+          Logger.log(error.stack);
+          Logger.log("Create the index.html file if you'd like to use the edit functionality from the email notifications")
+        } 
         // The following chunk of code is building pieces of the email
+        const editURL = publishedUrl + "?id=" + thought.getId() + "&action=edit";
         const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
         const docUrl = "https://docs.google.com/document/d/" + doc.getId();
         const favoriteUrl = publishedUrl + "?id=" + thought.getId() + "&action=favorite";
         const trashUrl = publishedUrl + "?id=" + thought.getId() + "&action=trash";
         const taskUrl = publishedUrl + "?id=" + thought.getId() + "&action=task";
+        const editLink = "<a href='" + editURL + "'>edit</a>";
         const audioLink = "<a href='" + audioUrl + "'>audio</a>";
         const docLink = "<a href='" + docUrl + "'>doc</a>";
         const favoriteLink = "<a href='" + favoriteUrl + "'>favorite</a>";
         const trashLink = "<a href='" + trashUrl + "'>trash</a>";
         const taskLink = "<a href='" + taskUrl + "'>task</a>";
-        var text = thought.getSize() > 20000 && googleCloudSpeechToTextAPIKey ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 20KB
+        var text = thought.getSize() > 5000 && googleCloudSpeechToTextAPIKey ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 5KB
         const processTagsResponse = processTags(filename, text, [], audioUrl); // Process tags appended to the filename
         text = processTagsResponse.text; // Pick up any modifications from the tag processing
         const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
@@ -253,8 +264,8 @@ function process() {
             }
           }
         }
-        const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
-        const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
+        const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate ? editURL + " / " : "") + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
+        const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate ? editLink + " / " : "") +  audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
         const data = [
           thought.getId(),
           filename,
@@ -262,8 +273,9 @@ function process() {
           "https://drive.google.com/file/d/" + thought.getId() + "/view",
           text,
           "https://docs.google.com/document/d/" + doc.getId(),
-          "",
-          origTags.join(",")
+          false,
+          origTags.join(","),
+          false
         ];
         insertRow(thoughtMasterSheet, data, 2) // The above data is appended to the top of the Master Spreadsheet
         DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId())); // Remove the 'Root Folder' tag
@@ -653,6 +665,56 @@ function getSheetById(spreadsheet,id) {
   )[0];
 }
 
+function saveThoughtData(data) {
+  Logger.log("saveThoughtData:");
+  Logger.log(data);
+  const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
+  const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetThoughtSheetID);
+  const thoughtData = thoughtMasterSheet.getDataRange().getValues();
+  var response = {};
+  response.data = data;
+  response.status = "FAILURE";
+  var rowID = -1;
+  for (var i = 0; i < thoughtData.length; i++) {
+    if (data.id == thoughtData[i][0]) {
+      rowID = i + 1;
+      const range = thoughtMasterSheet.getRange('A' + rowID + ':I' + rowID);
+      const values = range.getValues().flat();
+      range.setValues([[
+        values[0],
+        values[1],
+        values[2],
+        values[3],
+        data.text,
+        values[5],
+        data.favorite,
+        data.tags,
+        true
+      ]])
+      response.status = "SUCCESS";
+      break;
+    }
+  }
+  Logger.log("response:");
+  Logger.log(response);
+  return response;
+}
+
+function getThoughtData(id) {
+  const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
+  const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetThoughtSheetID);
+  const thoughtData = thoughtMasterSheet.getDataRange().getValues();
+  const response = {};
+  for (var i = 0; i < thoughtData.length; i++) {
+    if (id == thoughtData[i][0]) {
+      response.text = thoughtData[i][4];
+      response.favorite = thoughtData[i][6];
+      response.tags = thoughtData[i][7];
+      return response;
+    }
+  }
+}
+
 // This special function allows your script to respond to public GET requests when you deploy your script as a Web App
 // See here for more info - https://developers.google.com/apps-script/guides/web
 // In the email that gets sent containing the transcription and audio files are also several special links.
@@ -669,35 +731,59 @@ function doGet(e) {
     switch(action) {
     case "favorite": // Mark the Thought in the Master Spreadsheet as a 'Favorite'
       message = "favorited";
-      for (var i = 0; thoughtData.length; i++) {
+      for (var i = 0; i < thoughtData.length; i++) {
         if (id == thoughtData[i][0]) {
           thoughtMasterSheet.getRange("G" + (i + 1)).setValue("TRUE");
-          break;
+          const html = HtmlService.createHtmlOutput(); // Return a barebones html page containing the message set above
+          html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+          html.append("<h2>" + message + "</h2>")
+          return html;
+          // break;
         }
       }
       break;
     case "trash": // Delete the Thought's entry in the Master Spreadsheet
       message = "trashed";
-      for (var i = 0; thoughtData.length; i++) {
+      for (var i = 0; i < thoughtData.length; i++) {
         if (id == thoughtData[i][0]) {
           thoughtMasterSheet.deleteRow(i + 1);
-          break;
+          const html = HtmlService.createHtmlOutput(); // Return a barebones html page containing the message set above
+          html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+          html.append("<h2>" + message + "</h2>")
+          return html;
+          // break;
         }
       }
       break;
     case "task": // Allow adding a task after processing (in case the user didn't use the 'task' tag)
       message = "task added";
-      for (var i = 0; thoughtData.length; i++) {
+      for (var i = 0; i < thoughtData.length; i++) {
         if (id == thoughtData[i][0]) {
           processTags(thoughtData[i][1], thoughtData[i][4], ["task"], thoughtData[i][3]); // Running through processTags() enables adding priority to the task if it was already added as a tag
-          break;
+          const html = HtmlService.createHtmlOutput(); // Return a barebones html page containing the message set above
+          html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+          html.append("<h2>" + message + "</h2>")
+          return html;
+          // break;
         }
       }
       break;
+    case "edit":
+      const template = HtmlService.createTemplateFromFile(indexHtmlFilename); 
+      const html = template.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      html.setTitle("Programmable Thoughts - Edit Thought");
+      html.addMetaTag('viewport', 'width=device-width, initial-scale=1');
+      for (var i = 0; i < thoughtData.length; i++) {
+        if (id == thoughtData[i][0]) {
+          html.append('<div id="thoughtID" style="display:none">' + id + '</div>');
+          break;
+        }
+      }
+      return html;
     }
-    const response = HtmlService.createHtmlOutput(); // Return a barebones html page containing the message set above
-    response.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-    response.append("<h2>" + message + "</h2>")
-    return response;
+    // const html = HtmlService.createHtmlOutput(); // Return a barebones html page containing the message set above
+    // html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    // html.append("<h2>" + message + "</h2>")
+    // return html;
   }
 }
