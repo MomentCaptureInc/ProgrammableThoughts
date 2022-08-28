@@ -738,7 +738,6 @@ function doGet(e) {
           html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
           html.append("<h2>" + message + "</h2>")
           return html;
-          // break;
         }
       }
       break;
@@ -751,7 +750,6 @@ function doGet(e) {
           html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
           html.append("<h2>" + message + "</h2>")
           return html;
-          // break;
         }
       }
       break;
@@ -764,7 +762,6 @@ function doGet(e) {
           html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
           html.append("<h2>" + message + "</h2>")
           return html;
-          // break;
         }
       }
       break;
@@ -781,9 +778,5 @@ function doGet(e) {
       }
       return html;
     }
-    // const html = HtmlService.createHtmlOutput(); // Return a barebones html page containing the message set above
-    // html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-    // html.append("<h2>" + message + "</h2>")
-    // return html;
   }
 }
