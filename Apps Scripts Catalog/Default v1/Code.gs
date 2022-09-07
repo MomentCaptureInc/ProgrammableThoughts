@@ -235,8 +235,14 @@ function process() {
               var tagDoc;
               for (var x = 1; x < thoughtTagValues.length; x++) {
                 if (origTags[i] == thoughtTagValues[x][0]) {
-                  tagDoc = DocumentApp.openById(thoughtTagValues[x][1]);
                   rowID = x;
+                  try {
+                    tagDoc = DocumentApp.openById(thoughtTagValues[x][1]);
+                  } catch (error) {
+                    Logger.log(error.stack);
+                    Logger.log("Removing row containtain bad tag data. Document possibly deleted.")
+                    thoughtTagSheet.deleteRow(rowID);
+                  }
                   break;
                 }
               }
