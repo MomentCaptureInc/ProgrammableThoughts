@@ -240,13 +240,15 @@ function process() {
                     tagDoc = DocumentApp.openById(thoughtTagValues[x][1]);
                   } catch (error) {
                     Logger.log(error.stack);
-                    Logger.log("Removing row containtain bad tag data. Document possibly deleted.")
-                    thoughtTagSheet.deleteRow(rowID);
+                    Logger.log("Removing row containting bad tag data. Document possibly deleted.")
+                    Logger.log("rowID: " + rowID + " thoughtTagValues[x][0]: " + thoughtTagValues[x][0]);
+                    thoughtTagSheet.deleteRow(rowID + 1);
+                    tagDoc = false;
                   }
                   break;
                 }
               }
-              if (rowID == -1) { // Create a new doc as this is a new tag
+              if (rowID == -1 || !tagDoc) { // Create a new doc as this is a new tag or the doc has been deleted
                 tagDoc = DocumentApp.create(origTags[i]);
                 const tagDocUrl = "https://docs.google.com/document/d/" + tagDoc.getId();
                 const tagData = [
