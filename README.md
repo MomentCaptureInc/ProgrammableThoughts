@@ -14,8 +14,8 @@ There are two main pieces that make up "Programmable Thoughts". First, the [iOS]
 8. Regular Tags are parsed
     * Some tag names ("p1,p2,p3,task") have pre-defined logic
     * All others tags just get written into the email and spreadsheet
-10. Insert a record into the "Programmable Thoughts Data" spreadsheet which has a record and metadata for each Thought
-11. Send you an email that contains the audio file, transcription, tags, and special links that allow you to take specific actions (ie. add a task, favorite, trash)
+10. Row inserted into the "Programmable Thoughts Data" spreadsheet which has a record and metadata for each Thought
+11. Email is sent from/to your Gmail address that contains the audio file, transcription, tags, and special links that allow you to take specific actions (ie. add a task, favorite, trash)
 
 
 ## Getting Started
