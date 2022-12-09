@@ -14,7 +14,7 @@ There are two main pieces that make up "Programmable Thoughts". First, the [iOS]
 8. Regular Tags are parsed
     * Some tag names ("p1,p2,p3,task") have pre-defined logic
     * All others tags just get written into the email and spreadsheet
-10. Row inserted into the "Programmable Thoughts Data" spreadsheet which has a record and metadata for each Thought
+10. Row is inserted into the "Programmable Thoughts Data" spreadsheet which has a record and metadata for each Thought
 11. Email is sent from/to your Gmail address that contains the audio file, transcription, tags, and special links that allow you to take specific actions (ie. add a task, favorite, trash)
 
 
@@ -78,7 +78,7 @@ Programmable Thoughts was originally conceived as a quick-entry thought organize
   - etc.
 
 ## Trust and Validation
-With the incredible flexibility and power of Google Apps Script, you do need to trust the code you're executing. That's why we've created a centralized catalog of <b>Trusted Programmable Thoughts Apps Scripts</b> that have been reviewed by multiple team members and automatically scanned for potential vulnerabilities. We will soon be building a list of minimum requirements to be eligible for inclusion in the catalog (ie. no delete actions, bulk email spamming, etc.) We want to see the functionality of Programmable Thoughts grow, but security and trust will always be our number one priority.
+With the incredible flexibility and power of Google Apps Script, you need to be able to trust the code you're executing. That's why we've created an open source catalog of <b>Trusted Programmable Thoughts Apps Scripts</b>. Each script available here will have been transparently reviewed by multiple team members and automatically scanned for potential vulnerabilities. We will soon be building a list of minimum requirements to be eligible for inclusion in the catalog (ie. no delete actions, bulk email spamming, etc.) We want to see the functionality of Programmable Thoughts grow, but security and trust will always be our number one priority.
 
 ## Contributing
 If you'd like to have your own Programmable Thoughts compatible Apps Script listed in the [Apps Script Catalog](Apps%20Scripts%20Catalog), or would like to extend an existing script, just submit a PR and we'll work with you on making that happen. And feel free to [post an issue](https://github.com/MomentCaptureInc/ProgrammableThoughts/issues/new) if you run into any issues or post a [discussion topic](https://github.com/MomentCaptureInc/ProgrammableThoughts/discussions/new) for discussing more general things.
