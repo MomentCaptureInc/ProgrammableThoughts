@@ -2,112 +2,544 @@
 <html>
   <head>
     <base target="_top">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.0-beta1/css/bootstrap.min.css" integrity="sha512-o/MhoRPVLExxZjCFVBsm17Pkztkzmh7Dp8k7/3JrtNCHh0AQ489kwpfA3dPSHzKDe8YCuEhxXq3Y71eb/o6amg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.13.6/css/selectize.bootstrap5.css" integrity="sha512-wD3+yEMEGhx4+wKKWd0bNGCI+fxhDsK7znFYPvf2wOVxpr7gWnf4+BKphWnUCzf49AUAF6GYbaCBws1e5XHSsg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.0-beta1/js/bootstrap.min.js" integrity="sha512-Hqe3s+yLpqaBbXM6VA0cnj/T56ii5YjNrMT9v+us11Q81L0wzUG0jEMNECtugqNu2Uq5MSttCg0p4KK0kCPVaQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.13.6/js/standalone/selectize.min.js" integrity="sha512-pgmLgtHvorzxpKra2mmibwH/RDAVMlOuqU98ZjnyZrOZxgAR8hwL8A02hQFWEK25V40/9yPYb/Zc+kyWMplgaA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.0-beta1/css/bootstrap.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://unpkg.com/tabulator-tables@5.4.3/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+    <!-- <link href="https://unpkg.com/tabulator-tables@5.4.3/dist/css/tabulator.min.css" rel="stylesheet"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.13.6/css/selectize.bootstrap5.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.4.3/dist/js/tabulator.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.0-beta1/js/bootstrap.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.13.6/js/standalone/selectize.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.1.1/luxon.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- LATEST TABULATOR CODE FOR DEV TESTING -->
+    <!-- <link href="https://unpkg.com/tabulator-tables/dist/css/tabulator.min.css" rel="stylesheet"> -->
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables/dist/js/tabulator.min.js"></script>
     <style>
       body {
-        margin: 1em;
+        padding: 0px;
+        margin: 0px;
+        color: #eee;
+        background: #121212;
+      }
+      a {
+        color: #809fff;
+      }
+      .btn {
+        width: 100%;
+      }
+      .form-floating>label {
+        color: black;
+        padding-left: 1em;
+      }
+      #text {
+        color: #fff;
+        background-color: #121212;
+      }
+      #notes {
+        color: #fff;
+        background-color: #121212;
+      }
+      .form-control {
+        color: #fff;
+        background-color: #121212;
+        border-radius: 0;
+      }
+      .form-select {
+        border-radius: 0;
       }
       #audioPlayer {
         border: none;
+        background-color: #121212;
+        scale: 1.02;
+      }
+      audio::-webkit-media-controls-panel {
+        background-color: #fff;
+      }
+      audio::-webkit-media-controls-timeline {
+        background-color: #fff;
+        border-radius: 0px;
+        margin-left: 15px;
+        margin-right: 5px;
+      }
+      audio::-webkit-media-controls-volume-slider {
+        background-color: #fff;
+        border-radius: 0px;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+      audio::-webkit-media-controls-mute-button {
+        background-color: #fff;
+        border-radius: 0px;
+      }
+      audio::-webkit-media-controls-play-button {
+        background-color: #fff;
+        border-radius: 0px;
+      }
+      audio::-webkit-media-controls-current-time-display {
+        /* color: #fff; */
+      }
+      audio::-webkit-media-controls-time-remaining-display {
+        /* color: #fff; */
+      }
+      .selectize-input {
+        background-color: #121212;
+      }
+      .selectize-control.multi .selectize-input>div {
+        background-color: #fff;
+      }
+      .selectize-input.has-items>input {
+        color: #fff;
+      }
+      .wrapper{
+        min-height:100%;
+        position:relative;
+      }
+      .container{
+        width: 100vw;
+        margin: 0px;
+        padding-bottom: 350px;
+        padding-left: 0px;
+        padding-right: 0px;
+      }
+      .footer{
+        position:absolute;
+        bottom:0;
+        height:350px;
+        width:100%;
+        padding-top: 1em;
+        padding-left: 1em;
+        padding-right: 1em;
+      }
+      .saving {
+        float: right;
+      }
+      #tabulator-main { 
+        width: 100vw
       }
       .hidden {
-        visibility: hidden;
+        display: none;
+      }
+      .padded {
+        padding: 0.75em;
+      }
+      .centerViewport {
+        z-index: 10000;
+        filter: blur(.5px);
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -80%);
+      }
+      // Source - https://gist.github.com/nucreativa/c517c0333737d93c75d3
+      .spinner {
+        width: 50px;
+        height: 40px;
+        text-align: center;
+        font-size: 10px;
+      }
+      .spinner > div {
+        background-color: #fff;
+        height: 100%;
+        width: 6px;
+        display: inline-block;
+        
+        -webkit-animation: sk-stretchdelay 1.2s infinite ease-in-out;
+        animation: sk-stretchdelay 1.2s infinite ease-in-out;
+      }
+      .spinner .rect2 {
+        -webkit-animation-delay: -1.1s;
+        animation-delay: -1.1s;
+      }
+      .spinner .rect3 {
+        -webkit-animation-delay: -1.0s;
+        animation-delay: -1.0s;
+      }
+      .spinner .rect4 {
+        -webkit-animation-delay: -0.9s;
+        animation-delay: -0.9s;
+      }
+      .spinner .rect5 {
+        -webkit-animation-delay: -0.8s;
+        animation-delay: -0.8s;
+      }
+      @-webkit-keyframes sk-stretchdelay {
+        0%, 40%, 100% { -webkit-transform: scaleY(0.4) }  
+        20% { -webkit-transform: scaleY(1.0) }
+      }
+      @keyframes sk-stretchdelay {
+        0%, 40%, 100% { 
+          transform: scaleY(0.4);
+          -webkit-transform: scaleY(0.4);
+        }  20% { 
+          transform: scaleY(1.0);
+          -webkit-transform: scaleY(1.0);
+        }
       }
     </style>
   </head>
   <body>
-    <div id="statusContainer" class="hidden">
-      <h2 id="statusText"></h2>
-    </div>
-    <div class="container hidden">
-      <form class="row g-3 needs-validation" novalidate>
-        <div class="col-12">
-          <textarea class="form-control" readonly id="origThought" rows="3" tabindex="-1" required></textarea>
-        </div>
-        <div class="col-12">
-          <audio id="audioPlayer" class="form-control" id="recording" controls>
-            <source id="audioSource" src="" type="audio/mpeg">
-          </audio>
-        </div>
-        <div class="col-12">
-          <textarea class="form-control" id="newThought" rows="3" tabindex="-1" required></textarea>
-        </div>
-        <div class="col-12">
-          <input type="text" class="form-control" id="tagInput" value="" placeholder="Tags" tabindex="-1" style="display: none;">
-        </div>
-        <div class="col-8">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" value="" id="favorite" tabindex="-1" required>
-            <label class="form-check-label" for="favorite">
-              Favorite
-            </label>
+    <div class="wrapper">
+      <div class="status spinner centerViewport">
+        <div class="rect1"></div>
+        <div class="rect2"></div>
+        <div class="rect3"></div>
+        <div class="rect4"></div>
+        <div class="rect5"></div>
+      </div>
+      <div class="container">
+          <div id="tabulator-main"></div>
+      </div>
+      <div class="footer hidden" id="controls">
+        <form class="row g-3 needs-validation" novalidate>
+          <div class="col-12">
+            <audio id="audioPlayer" class="form-control" id="recording" controls tabindex="-1">
+              <source id="audioSource" src="" type="audio/mpeg">
+            </audio>
           </div>
-        </div>
-        <div class="d-grid col-4 mx-auto">
-          <button type="button" id="saveButton" class="btn btn-outline-primary">Save</button>
-        </div>
-      </form>
-    </div>
+          <div class="col-6">
+            <textarea class="form-control" id="text" rows="5" required></textarea>
+          </div>
+          <div class="col-6">
+            <textarea class="form-control" id="notes" rows="5"></textarea>
+          </div>
+          <div class="col-5">
+            <input type="text" class="form-control" id="tags" value="" placeholder="Tags">
+          </div>
+          <!-- <div class="col-3 form-floating"> -->
+          <div class="col-5">
+            <select class="form-select" id="recentDocs">
+              <option></option>
+            </select>
+            <!-- <label for="recentDocs" class="form-label">Recent Docs</label> -->
+          </div>
+          <div class="col-1">
+            <button type="button" class="btn btn-secondary" id="copyToDoc">💾</button>
+          </div>
+          <div class="col-1">
+            <button type="button" class="btn btn-secondary" id="copyToClipboard">📋</button>
+          </div>
+          <div class="col-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="" id="unread" required>
+              <label class="form-check-label" for="unread">
+                Unread
+              </label>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="" id="flagged" required>
+              <label class="form-check-label" for="flagged">
+                Flagged
+              </label>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="" id="copied" required>
+              <label class="form-check-label" for="copied">
+                Copied
+              </label>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="saving">
+              <div class="rect1"></div>
+              <div class="rect2"></div>
+              <div class="rect3"></div>
+              <div class="rect4"></div>
+              <div class="rect5"></div>
+            </div>
+          </div>
+        </form>
+      </div>
+  </div>
   <script>
-    $(function() {
-      const id = $('#thoughtID').html();
-      console.log("id: " + id);
-      if (id) {
-        google.script.run
-          .withSuccessHandler((e) => {
-            console.log("getThoughtData success:", e);
-            $('.container').removeClass('hidden');
-            $('#origThought').html(e.text);
-            $('#newThought').html(e.text.split(' (')[0]);
-            $("#audioSource").attr("src", "https://drive.google.com/uc?export=download&id=" + id);
-            $("#audioPlayer")[0].load();
-            $("#favorite").prop('checked', e.favorite);
-            $('#tagInput').val(e.tags);
-            $("#tagInput").selectize({
-              delimiter: ",",
-              persist: false,
-              create: function (input) {
-                return {
-                  value: input,
-                  text: input,
-                };
-              },
-            });
+    console.log("Initializing Admin UX...");
+
+    google.script.run.withSuccessHandler((recentDocs) => {
+      console.log("getRecentDocs success");
+      recentDocs.forEach(function(e, i){
+        $('#recentDocs').append($('<option></option>').val(e.id).text(e.title));
+      });
+    })
+    .withFailureHandler((e) => {
+      console.log("getRecentDocs failure:", e);
+    })
+    .getRecentDocs();
+
+    google.script.run.withSuccessHandler((thoughtData) => {
+      console.log("getThoughtDataJSON success");
+      var initialized, audioIsPlaying, audioSrcLoaded, selectedRowPosition, selectedID;
+      var unsavedThoughts = [];
+      const audioPlayer = document.getElementById("audioPlayer");
+      const controls = document.getElementById("controls");
+      const thoughtDataJSON = JSON.parse(thoughtData);
+      thoughtDataJSON.sort(customSort);
+
+      const table = new Tabulator("#tabulator-main", {
+        height:"calc(100vh - 350px)",
+        reactiveData:true,
+        selectable:1,
+        data:thoughtDataJSON,
+        persistence:{
+          sort:true,
+          filter:true,
+          columns:true,
+        },
+        persistenceID:"programmableThoughtsTableConfigV1.81",
+        keybindings:{
+          "navUp" : false,
+          "navDown" : false,
+        },
+        layout:"fitColumns",
+        columns:[
+          {title:"Text", field:"text", hozAlign:"left", widthGrow:2, resizable: "header", headerFilter:"input", formatter:"textarea"},
+          {title:"Notes", field:"notes", hozAlign:"left", widthGrow:2, resizable: "header", headerFilter:"input", formatter:"textarea"},
+          {title:"Tags", field:"tags", hozAlign:"left", widthGrow:1, resizable: "header", headerFilter:"input"},
+          {title:"Unread", field:"unread", hozAlign:"center", widthGrow:1, headerHozAlign:"center", formatter:"tickCross", resizable: "header", headerFilter:"input", formatterParams:{
+            crossElement: false,
+          }},
+          {title:"Copied", field:"copied", hozAlign:"center", widthGrow:1, headerHozAlign:"center", formatter:"tickCross", resizable: "header", headerFilter:"input", formatterParams:{
+            crossElement: false,
+          }},
+          {title:"Flagged", field:"flagged", hozAlign:"center", widthGrow:1, headerHozAlign:"center", formatter:"tickCross", resizable: "header", headerFilter:"input", formatterParams:{
+            // tickElement: '<svg width="14" height="14" viewBox="0 0 512 512" xml:space="preserve" style="padding: 0px 1px;"><polygon fill="#D2D2D2" stroke="#686868" stroke-width="37.6152" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" points="259.216,29.942 330.27,173.919 489.16,197.007 374.185,309.08 401.33,467.31 259.216,392.612 117.104,467.31 144.25,309.08 29.274,197.007 188.165,173.919 "></polygon></svg>',
+            crossElement: false,
+          }},
+          {title:"Created Date", field:"createdDate", hozAlign:"center", widthGrow:1, headerHozAlign:"center", resizable: "header", headerFilter:"input", formatter:"datetime", formatterParams:{
+            inputFormat:"iso",
+            outputFormat:"MM/dd/yy t",
+            invalidPlaceholder:"(invalid date)"
+          }},
+          {title:"Audio", field:"audio", hozAlign:"left", widthGrow:1, resizable: "header", headerFilter:"input", formatter:"link", formatterParams:{
+              label: "link",
+              target:"_blank",
+          }},
+        ],
+      });
+
+      table.on("tableBuilt", function() {
+        initialized = true;
+        $('.status').removeClass('spinner');
+        $('#controls').removeClass('hidden');
+        $(".tabulator-tableholder")[0].focus();
+        table.selectRow(table.getRowFromPosition(1));
+        table.options.selectableCheck = function(row) {
+          const selectedRows = table.getSelectedRows();
+          if(selectedRows.length == 1 && selectedRows[0] === row) return false;
+          return true;
+        }
+        updateControls(table.getSelectedRows()[0], false);
+        saveDataLooper();
+      });
+
+      table.on("rowClick", function(e, row) { 
+        updateControls(row, true);
+      });
+
+      document.getElementById("text").addEventListener("change", queueSaveData);
+      document.getElementById("notes").addEventListener("change", queueSaveData);
+      document.getElementById("flagged").addEventListener("change", queueSaveData);
+      document.getElementById("copied").addEventListener("change", queueSaveData);
+      document.getElementById("unread").addEventListener("change", queueSaveData);
+      document.getElementById("copyToDoc").addEventListener("click", copyToDoc);
+      document.getElementById("copyToClipboard").addEventListener("click", copyToClipboard);
+
+      function copyToClipboard() {
+        const data = {};
+        data.id = selectedID;
+        const index = thoughtDataJSON.findIndex((obj => obj.id == data.id));
+        navigator.clipboard.writeText(thoughtDataJSON[index].text + " " + thoughtDataJSON[index].audio);
+      }
+
+      function copyToDoc() {
+        const selectedDocID = $('#recentDocs').find(":selected").val();
+        if (!selectedDocID) return;
+        const data = {};
+        data.id = selectedID;
+        const index = thoughtDataJSON.findIndex((obj => obj.id == data.id));
+        google.script.run.withSuccessHandler((e) => {
+          console.log("copyToDoc success:", e);
+        })
+        .withFailureHandler((e) => {
+          console.log("copyToDoc failure:", e);
+        })
+        .copyToDoc(selectedDocID, thoughtDataJSON[index].text, thoughtDataJSON[index].audio);
+        $("#copied").prop('checked', true);
+        queueSaveData();
+        selectNewerRow();
+      }
+
+      window.onbeforeunload = function() {
+        if (unsavedThoughts.length > 0) return "";
+      }
+
+      // if('visualViewport' in window) {
+      //   window.visualViewport.addEventListener('resize', function(event) {
+      //     if(event.target.height + 30 < document.scrollElement.clientHeight) {
+      //       console.log("UP");
+      //     } else {
+      //       console.log("DOWN");
+      //       queueSaveData();
+      //     }
+      //   });
+      // }
+
+      window.addEventListener('keydown', function(e) {
+        if (e.target != $(".tabulator-tableholder")[0] || !initialized) return;
+        if(e.code == "ArrowDown" && selectedRowPosition && selectedRowPosition != table.getDataCount()) {
+          e.preventDefault();
+          moveToNextRow();
+        } else if(e.code == "ArrowUp" && selectedRowPosition) {
+          e.preventDefault();
+          moveToPreviousRow();
+        } else if(e.code == "Space") {
+          e.preventDefault();
+          if (audioSrcLoaded) {
+            if (audioIsPlaying) {
+              audioPlayer.pause();
+            } else {
+              audioPlayer.play();
+            }
+          } else {
+            console.log("Audio source not ready");
+          }
+        } else if (e.code == "KeyF") {
+          e.preventDefault();
+          $("#flagged").prop('checked', !$("#flagged").is(':checked'));
+          queueSaveData();
+        } else if (e.code == "KeyC") {
+          e.preventDefault();
+          $("#copied").prop('checked', !$("#copied").is(':checked'));
+          queueSaveData();
+        } else if (e.code == "KeyU") {
+          e.preventDefault();
+          $("#unread").prop('checked', !$("#unread").is(':checked'));
+          queueSaveData();
+        }
+      });
+
+      function selectNewerRow() {
+        const currentRowDate = new Date(table.getRowFromPosition(selectedRowPosition).getData().createdDate);
+        const nextRowDate = new Date(table.getRowFromPosition(selectedRowPosition + 1).getData().createdDate);
+        if (currentRowDate.getTime() > nextRowDate.getTime()) {
+          moveToPreviousRow();
+        } else {
+          moveToNextRow();
+        }
+      }
+
+      function selectOlderRow() {
+        const currentRowDate = new Date(table.getRowFromPosition(selectedRowPosition).getData().createdDate);
+        const nextRowDate = new Date(table.getRowFromPosition(selectedRowPosition + 1).getData().createdDate);
+        if (currentRowDate.getTime() > nextRowDate.getTime()) {
+          moveToNextRow();
+        } else {
+          moveToPreviousRow();
+        }
+      }
+
+      function moveToNextRow() {
+        table.deselectRow();
+        selectedRowPosition = selectedRowPosition + 1;
+        table.selectRow(table.getRowFromPosition(selectedRowPosition));
+        updateControls(table.getSelectedRows()[0], true);
+      }
+
+      function moveToPreviousRow() {
+        if (selectedRowPosition - 1 > 0) {
+          table.deselectRow();
+          selectedRowPosition = selectedRowPosition - 1;
+          table.selectRow(table.getRowFromPosition(selectedRowPosition));
+          updateControls(table.getSelectedRows()[0], true);
+        }
+      }
+
+      audioPlayer.onplaying = function() {
+        audioIsPlaying = true;
+      };
+
+      audioPlayer.onpause = function() {
+        audioIsPlaying = false;
+      };
+
+      function customSort(a, b) {
+        return new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime();
+      }
+
+      function queueSaveData() {
+        const data = {};
+        data.id = selectedID;
+        data.text = $('#text').val();
+        data.notes = $('#notes').val();
+        data.tags = $('#tags').val();
+        data.flagged = $("#flagged").is(':checked');
+        data.unread = $("#unread").is(':checked');
+        data.copied = $("#copied").is(':checked');
+        console.log("Adding: " + selectedID + " to unsavedThoughts");
+        const index = thoughtDataJSON.findIndex((obj => obj.id == data.id));
+        thoughtDataJSON[index].text = data.text;
+        thoughtDataJSON[index].notes = data.notes;
+        thoughtDataJSON[index].tags = data.tags;
+        thoughtDataJSON[index].flagged = data.flagged;
+        thoughtDataJSON[index].unread = data.unread;
+        thoughtDataJSON[index].copied = data.copied;
+        unsavedThoughts.push(data);
+        $('.saving').addClass('spinner');
+      }
+
+      function saveDataLooper() {
+          google.script.run.withSuccessHandler((e) => {
+            console.log("saveDataLooper:", e);
+            if (unsavedThoughts.length == 0) $('.saving').removeClass('spinner');
+            saveDataLooper();
           })
           .withFailureHandler((e) => {
-            console.log("getThoughtData failure:", e);
-            $('.container').addClass('hidden');
-            $('#statusContainer').removeClass('hidden');
-            $('#statusText').html(e.status);
+            console.log("saveDataLooper:", e);
+            saveDataLooper();
           })
-          .getThoughtData(id);
-        $( "#saveButton" ).click(function() {
-          const data = {};
-          data.id = id;
-          data.text = $('#newThought').val();
-          data.tags = $('#tagInput').val();
-          data.favorite = $("#favorite").is(':checked');
-          console.log("saveButton click:", data)
-          $('.container').addClass('hidden');
-          google.script.run
-            .withSuccessHandler((e) => {
-              console.log("saveThoughtData success:", e);
-              $('#statusContainer').removeClass('hidden');
-              $('#statusText').html(e.status);
-            })
-            .withFailureHandler((e) => {
-              console.log("saveThoughtData failure:", e);
-              $('#statusContainer').removeClass('hidden');
-              $('#statusText').html(e.status);
-            })
-            .saveThoughtData(data);
-        });
+          .saveThoughtsData(unsavedThoughts);
+          unsavedThoughts = [];
       }
-    });
+
+      function updateControls(row, userInitiated) {
+        audioSrcLoaded = false;
+        audioIsPlaying = false;
+        const rowData = row.getData();
+        if (rowData.id) {
+          selectedID = rowData.id;
+          selectedRowPosition = table.getRowPosition(row);
+          if (rowData.text) $('#text').val(rowData.text.split(' (')[0]);
+          $('#notes').val(rowData.notes);
+          $("#audioSource").attr("src", "https://drive.google.com/uc?export=download&id=" + rowData.id);
+          $("#audioPlayer")[0].load();
+          audioSrcLoaded = true;
+          $("#flagged").prop('checked', rowData.flagged);
+          $("#unread").prop('checked', rowData.unread);
+          $("#copied").prop('checked', rowData.copied);
+          if ($("#tags").selectize().selectize) $("#tags").selectize()[0].selectize.destroy();
+          $('#tags').val(rowData.tags);
+          $("#tags").selectize({
+            delimiter: ",",
+            persist: false,
+            create: function (input) {
+              return {
+                value: input,
+                text: input,
+              };
+            },
+            onChange: queueSaveData
+          });
+          queueSaveData();
+          if (userInitiated) audioPlayer.play();
+        }
+      }
+    })
+    .withFailureHandler((e) => {
+      console.log("getThoughtDataJSON failure:", e);
+    })
+    .getThoughtDataJSON();
   </script>
   </body>
 </html>

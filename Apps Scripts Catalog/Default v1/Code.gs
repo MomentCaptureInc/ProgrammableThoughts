@@ -45,8 +45,8 @@ const speechUrl = "https://speech.googleapis.com/v1p1beta1/"; // Google Cloud Sp
 const scriptProperties = PropertiesService.getScriptProperties(); // Script properties are scoped to this script 
 // Get the Google Drive File IDs of various folders / documents the script needs
 const processedFolderID = scriptProperties.getProperty("processedFolderID");
-const docFolderID = scriptProperties.getProperty("docFolderID");
-const tagFolderID = scriptProperties.getProperty("tagFolderID");
+// const docFolderID = scriptProperties.getProperty("docFolderID");
+// const tagFolderID = scriptProperties.getProperty("tagFolderID");
 const thoughtFolderID = scriptProperties.getProperty("thoughtFolderID");
 const masterSpreadsheetFileID = scriptProperties.getProperty("masterSpreadsheetFileID");
 const masterSpreadsheetThoughtSheetID = scriptProperties.getProperty("masterSpreadsheetThoughtSheetID");
@@ -59,7 +59,8 @@ const indexHtmlFilename = "index";
 // 3. Create an Apps Script Trigger which runs the rollingProcess() function every minute
 // Before actually running, you'll be presented with an OAuth permissions request. This request covers all of the code in the script, not just the APIs used in the 'initialize' function
 function initialize() {
-  if (!processedFolderID || !docFolderID || !tagFolderID || !thoughtFolderID || !masterSpreadsheetFileID) {  // Only run if this function hasn't been yet as these IDs are set inside this function
+  // if (!processedFolderID || !docFolderID || !tagFolderID || !thoughtFolderID || !masterSpreadsheetFileID) {  // Only run if this function hasn't been yet as these IDs are set inside this function
+  if (!processedFolderID || !thoughtFolderID || !masterSpreadsheetFileID) {  // Only run if this function hasn't been yet as these IDs are set inside this function
     Logger.log("Initializing");
     const scriptFile = DriveApp.getFileById(ScriptApp.getScriptId()); // Get a file reference to this script
     scriptFile.setName("Programmable Thoughts Script"); // Rename it from the default 'Untitled'
@@ -78,13 +79,13 @@ function initialize() {
     DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(scriptFile); // Folders in Google Drive act more like tags, so you need to remove the 'Root Folder' tag
     scriptProperties.setProperty("thoughtFolderID", thoughtFolder.getId()); // Save the parent folder ID in a Script Property
     scriptProperties.setProperty("processedFolderID", thoughtFolder.createFolder("Processed").getId()); // Create a 'Processed' folder and store the ID in a Script Property
-    scriptProperties.setProperty("docFolderID", thoughtFolder.createFolder("Docs").getId()); // Create a 'Docs' folder and store the ID in a Script Property
-    scriptProperties.setProperty("tagFolderID", thoughtFolder.createFolder("Tags").getId()); // Create a 'Tags' folder and store the ID in a Script Property
+    // scriptProperties.setProperty("docFolderID", thoughtFolder.createFolder("Docs").getId()); // Create a 'Docs' folder and store the ID in a Script Property
+    // scriptProperties.setProperty("tagFolderID", thoughtFolder.createFolder("Tags").getId()); // Create a 'Tags' folder and store the ID in a Script Property
     // Create a new Google Spreadsheet which will act as a database of all Thoughts
     // Configure the formatting and add a header
-    const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 9);
-    const entireSheetRange = masterSheet.getRange("A1:I2");
-    const headerRange = masterSheet.getRange("A1:I1");
+    const masterSheet = SpreadsheetApp.create("Programmable Thoughts Data", 2, 11);
+    const entireSheetRange = masterSheet.getRange("A1:K2");
+    const headerRange = masterSheet.getRange("A1:K1");
     const transcribedRange = masterSheet.getRange("E1:E");
     masterSheet.setFrozenRows(1);
     masterSheet.getActiveSheet().setName("Thoughts");
@@ -104,9 +105,11 @@ function initialize() {
       "Audio",
       "Text",
       "Doc",
-      "Favorite",
+      "Flagged",
       "Tags",
-      "Edited"
+      "Unread",
+      "Notes",
+      "Copied"
     ]]);
     const masterTagSheet = masterSheet.insertSheet("Tags");
     masterTagSheet.deleteColumns(4, masterTagSheet.getMaxColumns() - 3);
@@ -196,7 +199,7 @@ function process() {
         DriveApp.getFolderById(thoughtFolderID).removeFile(thought);
       } else {
         Logger.log("Processing Thought: " + filename + " dateCreated: " + thoughtDateCreated + " bytes: " + thought.getSize() + " sampleRate: " + sampleRate);
-        const doc = DocumentApp.create(filename); // Every Thought has an associated Google Doc created
+        // const doc = DocumentApp.create(filename); // Every Thought has an associated Google Doc created
         let indexHtmlTemplate;
         try {
           indexHtmlTemplate = HtmlService.createTemplateFromFile(indexHtmlFilename); // Create template from the indexHtmlFilename so we can conditionally chose to include 'edit' functionality
@@ -205,16 +208,16 @@ function process() {
           Logger.log("Create the index.html file if you'd like to use the edit functionality from the email notifications")
         } 
         // The following chunk of code is building pieces of the email
-        const editURL = publishedUrl + "?id=" + thought.getId() + "&action=edit";
+        const editURL = publishedUrl + "?action=edit";
         const audioUrl = "https://drive.google.com/file/d/" + thought.getId() + "/view";
-        const docUrl = "https://docs.google.com/document/d/" + doc.getId();
-        const favoriteUrl = publishedUrl + "?id=" + thought.getId() + "&action=favorite";
+        // const docUrl = "https://docs.google.com/document/d/" + doc.getId();
+        const flagUrl = publishedUrl + "?id=" + thought.getId() + "&action=flag";
         const trashUrl = publishedUrl + "?id=" + thought.getId() + "&action=trash";
         const taskUrl = publishedUrl + "?id=" + thought.getId() + "&action=task";
         const editLink = "<a href='" + editURL + "'>edit</a>";
         const audioLink = "<a href='" + audioUrl + "'>audio</a>";
-        const docLink = "<a href='" + docUrl + "'>doc</a>";
-        const favoriteLink = "<a href='" + favoriteUrl + "'>favorite</a>";
+        // const docLink = "<a href='" + docUrl + "'>doc</a>";
+        const flagLink = "<a href='" + flagUrl + "'>flag</a>";
         const trashLink = "<a href='" + trashUrl + "'>trash</a>";
         const taskLink = "<a href='" + taskUrl + "'>task</a>";
         var text = thought.getSize() > 5000 && googleCloudSpeechToTextAPIKey ? speechToText(thought, sampleRate) : ""; // Transcribe the audio if the file size > 5KB
@@ -223,80 +226,86 @@ function process() {
         const emailSubjectModifiers = processTagsResponse.emailSubjectModifiers; // Tags are added to the email subject
         const origTags = processTagsResponse.origTags;
         if (text) {
-          const docBody = doc.getBody(); // Add the transcribed text (if available) to the Google Doc
-          const docText = docBody.insertParagraph(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ");
-          const docAudioLink = docText.appendText("Audio").setLinkUrl(audioUrl);
-          docAudioLink.merge();
+          // const docBody = doc.getBody(); // Add the transcribed text (if available) to the Google Doc
+          // const docText = docBody.insertParagraph(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ");
+          // const docAudioLink = docText.appendText("Audio").setLinkUrl(audioUrl);
+          // docAudioLink.merge();
           if (origTags && origTags.length > 0) {
             const thoughtTagSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetTagSheetID);
             const thoughtTagValues = thoughtTagSheet.getDataRange().getValues();
             for (var i = 0; i < origTags.length; i++) { // Iterate through all tags and add them to the tag sheet if they are new
               var rowID = -1;
-              var tagDoc;
+              // var tagDoc;
               for (var x = 1; x < thoughtTagValues.length; x++) {
                 if (origTags[i] == thoughtTagValues[x][0]) {
                   rowID = x;
-                  try {
-                    tagDoc = DocumentApp.openById(thoughtTagValues[x][1]);
-                  } catch (error) {
-                    Logger.log(error.stack);
-                    Logger.log("Removing row containting bad tag data. Document possibly deleted.")
-                    Logger.log("rowID: " + rowID + " thoughtTagValues[x][0]: " + thoughtTagValues[x][0]);
-                    thoughtTagSheet.deleteRow(rowID + 1);
-                    tagDoc = false;
-                  }
+                  // try {
+                  //   tagDoc = DocumentApp.openById(thoughtTagValues[x][1]);
+                  // } catch (error) {
+                  //   Logger.log(error.stack);
+                  //   Logger.log("Removing row containting bad tag data. Document possibly deleted.")
+                  //   Logger.log("rowID: " + rowID + " thoughtTagValues[x][0]: " + thoughtTagValues[x][0]);
+                  //   thoughtTagSheet.deleteRow(rowID + 1);
+                  //   tagDoc = false;
+                  // }
                   break;
                 }
               }
-              if (rowID == -1 || !tagDoc) { // Create a new doc as this is a new tag or the doc has been deleted
-                tagDoc = DocumentApp.create(origTags[i]);
-                const tagDocUrl = "https://docs.google.com/document/d/" + tagDoc.getId();
+              // if (rowID == -1 || !tagDoc) { // Create a new doc as this is a new tag or the doc has been deleted
+              if (rowID == -1) { // Create a new doc as this is a new tag or the doc has been deleted
+                // tagDoc = DocumentApp.create(origTags[i]);
+                // const tagDocUrl = "https://docs.google.com/document/d/" + tagDoc.getId();
                 const tagData = [
                   origTags[i],
-                  tagDoc.getId(),
-                  tagDocUrl
+                  "", // tagDoc.getId(),
+                  ""  // tagDocUrl
                 ];
                 insertRow(thoughtTagSheet, tagData, 2) // The above data is appended to the top of the Tag sheet
-                DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(tagDoc.getId())); // Remove the 'Root Folder' tag
-                DriveApp.getFolderById(tagFolderID).addFile(DriveApp.getFileById(tagDoc.getId())); // Add the Google Doc to the 'Tags' folder
+                // DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(tagDoc.getId())); // Remove the 'Root Folder' tag
+                // DriveApp.getFolderById(tagFolderID).addFile(DriveApp.getFileById(tagDoc.getId())); // Add the Google Doc to the 'Tags' folder
               }
               // Add the transcribed text and audio link to the tag doc
-              const tagDocBody = tagDoc.getBody();
-              const tagText = tagDocBody.insertListItem(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);              
-              const tagAudioLink = tagText.appendText("Audio").setLinkUrl(audioUrl);
-              tagAudioLink.merge();
-              const tagSeparator = tagText.appendText(" / ").setLinkUrl("");
-              tagSeparator.merge();
-              const tagDocLink = tagText.appendText("Doc").setLinkUrl(docUrl);
-              tagDocLink.merge();
+              // const tagDocBody = tagDoc.getBody();
+              // const tagText = tagDocBody.insertListItem(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);              
+              // const tagAudioLink = tagText.appendText("Audio").setLinkUrl(audioUrl);
+              // tagAudioLink.merge();
+              // const tagSeparator = tagText.appendText(" / ").setLinkUrl("");
+              // tagSeparator.merge();
+              // const tagDocLink = tagText.appendText("Doc").setLinkUrl(docUrl);
+              // tagDocLink.merge();
             }
           }
         }
-        const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editURL + " / " : "") + audioUrl + " / " + docUrl + (publishedUrl ? " / " + favoriteUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
-        const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editLink + " / " : "") +  audioLink + " / " + docLink + (publishedUrl ? " / " + favoriteLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
+        // const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editURL + " / " : "") + audioUrl + " / " + docUrl + (publishedUrl ? " / " + flagUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
+        // const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editLink + " / " : "") +  audioLink + " / " + docLink + (publishedUrl ? " / " + flagLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
+        const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editURL + " / " : "") + audioUrl + (publishedUrl ? " / " + flagUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
+        const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editLink + " / " : "") +  audioLink + (publishedUrl ? " / " + flagLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
         const data = [
           thought.getId(),
           filename,
           thoughtDateCreated,
           "https://drive.google.com/file/d/" + thought.getId() + "/view",
           text,
-          "https://docs.google.com/document/d/" + doc.getId(),
+          "", // "https://docs.google.com/document/d/" + doc.getId(),
           false,
           origTags.join(","),
+          true,
+          "",
           false
         ];
         insertRow(thoughtMasterSheet, data, 2) // The above data is appended to the top of the Master Spreadsheet
-        DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId())); // Remove the 'Root Folder' tag
-        DriveApp.getFolderById(docFolderID).addFile(DriveApp.getFileById(doc.getId())); // Add the Google Doc to the 'Docs' folder
+        // DriveApp.getFolderById(DriveApp.getRootFolder().getId()).removeFile(DriveApp.getFileById(doc.getId())); // Remove the 'Root Folder' tag
+        // DriveApp.getFolderById(docFolderID).addFile(DriveApp.getFileById(doc.getId())); // Add the Google Doc to the 'Docs' folder
         DriveApp.getFolderById(processedFolderID).addFile(thought); // Move the file into the processed folder 
         DriveApp.getFolderById(thoughtFolderID).removeFile(thought); // Remove the file from the parent folder 
-        const thoughtSpreadsheetUrl = "https://docs.google.com/spreadsheets/d/" + thoughtSpreadsheet.getId();
-        const thoughtSpreadsheetLink = "<a href='" + thoughtSpreadsheetUrl + "'>All Thoughts</a>";
+        // const thoughtSpreadsheetUrl = "https://docs.google.com/spreadsheets/d/" + thoughtSpreadsheet.getId();
+        // const thoughtSpreadsheetLink = "<a href='" + thoughtSpreadsheetUrl + "'>All Thoughts</a>";
+        const thoughtAdminLink = "<a href='" + editURL + "'>All Thoughts</a>";
         const tailMessage = `
               
 
-        ${thoughtSpreadsheetUrl}`;
-        const tailHtmlmessage = "<br><br><br><br><br>" + thoughtSpreadsheetLink;
+        ${thoughtAdminLink}`;
+        const tailHtmlmessage = "<br><br><br><br><br>" + thoughtAdminLink;
         body = displayText + tailMessage;
         htmlBody = displayHtmlText + tailHtmlmessage;
         const subject = (emailSubjectModifiers && emailSubjectModifiers.length > 0 ? emailSubjectModifiers.join(' / ') + " - " : "") + "Thought " + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
@@ -466,27 +475,27 @@ function processTagCommands(filename) {
     const thoughtTagSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetTagSheetID);
     const thoughtTagValues = thoughtTagSheet.getDataRange().getValues();
     for (var i = 0; i < tagCommands.length; i++) {
-      var tagDocID;
-      for (var x = 1; x < thoughtTagValues.length; x++) {
-        if (tagCommands[i] == thoughtTagValues[x][0]) {
-          tagDocID = thoughtTagValues[x][1];
-          break;
-        }
-      }
-      if (tagDocID) {
-        const url = "https://docs.google.com/feeds/download/documents/export/Export?id="+tagDocID+"&exportFormat=pdf";
-        const param = {
-          method: "get",
-          headers: {"Authorization": "Bearer " + ScriptApp.getOAuthToken()},
-          muteHttpExceptions:true,
-        };
-        const response = UrlFetchApp.fetch(url, param);
-        const blob = response.getBlob().setName("Tag Report - " + tagCommands[i] + ".pdf");
-        GmailApp.sendEmail(Session.getActiveUser().getEmail(), "Tag Report - " + tagCommands[i], "", {
-          htmlBody: "",
-          attachments: [blob]
-        });
-      }
+      // var tagDocID;
+      // for (var x = 1; x < thoughtTagValues.length; x++) {
+      //   if (tagCommands[i] == thoughtTagValues[x][0]) {
+      //     tagDocID = thoughtTagValues[x][1];
+      //     break;
+      //   }
+      // }
+      // if (tagDocID) {
+      //   const url = "https://docs.google.com/feeds/download/documents/export/Export?id="+tagDocID+"&exportFormat=pdf";
+      //   const param = {
+      //     method: "get",
+      //     headers: {"Authorization": "Bearer " + ScriptApp.getOAuthToken()},
+      //     muteHttpExceptions:true,
+      //   };
+      //   const response = UrlFetchApp.fetch(url, param);
+      //   const blob = response.getBlob().setName("Tag Report - " + tagCommands[i] + ".pdf");
+      //   GmailApp.sendEmail(Session.getActiveUser().getEmail(), "Tag Report - " + tagCommands[i], "", {
+      //     htmlBody: "",
+      //     attachments: [blob]
+      //   });
+      // }
     }
   }
   Logger.log("Unmatched Tag Commands: " + tagCommands.join(', ')); // Due to the splice() above, tagCommands now only has unmatched entries
@@ -667,44 +676,80 @@ function paddedDate(date) {
 
 // Google Apps Script doesn't have a way to get a Google Spreadsheet's sheet by its ID (only by name) - https://issuetracker.google.com/issues/36759083
 function getSheetById(spreadsheet,id) {
-  if (!processedFolderID || !docFolderID || !tagFolderID || !thoughtFolderID || !masterSpreadsheetFileID) return;
+  // if (!processedFolderID || !docFolderID || !tagFolderID || !thoughtFolderID || !masterSpreadsheetFileID) return;
+  if (!processedFolderID || !thoughtFolderID || !masterSpreadsheetFileID) return;
   return spreadsheet.getSheets().filter(
     function(s) {return s.getSheetId() == id;}
   )[0];
 }
 
-function saveThoughtData(data) {
-  Logger.log("saveThoughtData:");
+function getRecentDocs() {
+  const filesArray = [];
+  const files = DriveApp.searchFiles('mimeType = "application/vnd.google-apps.document" and "me" in owners');
+  while (files.hasNext() && filesArray.length < 20) {
+    const file = files.next();
+    const data = {};
+    data.title = file.getName();
+    data.id = file.getId();
+    filesArray.push(data);
+  }
+  return filesArray;
+}
+
+function copyToDoc(id, text, audioUrl) {
+  const doc = DocumentApp.openById(id);
+  if (!doc) return;
+  const docBody = doc.getBody();
+  const docText = docBody.appendListItem(text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);
+  const docAudioLink = docText.appendText("Audio").setLinkUrl(audioUrl);
+  docAudioLink.merge();
+  // Add the transcribed text and audio link to the tag doc
+  // const tagDocBody = tagDoc.getBody();
+  // const tagText = tagDocBody.insertListItem(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);              
+  // const tagAudioLink = tagText.appendText("Audio").setLinkUrl(audioUrl);
+  // tagAudioLink.merge();
+  // const tagSeparator = tagText.appendText(" / ").setLinkUrl("");
+  // tagSeparator.merge();
+  // const tagDocLink = tagText.appendText("Doc").setLinkUrl(docUrl);
+  // tagDocLink.merge();
+}
+
+function saveThoughtsData(data) {
+  // const lock = LockService.getScriptLock();
+  // lock.waitLock(60000);
+  Logger.log("saveThoughtsData:");
   Logger.log(data);
   const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
   const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetThoughtSheetID);
   const thoughtData = thoughtMasterSheet.getDataRange().getValues();
-  var response = {};
-  response.data = data;
-  response.status = "FAILURE";
-  var rowID = -1;
-  for (var i = 0; i < thoughtData.length; i++) {
-    if (data.id == thoughtData[i][0]) {
-      rowID = i + 1;
-      const range = thoughtMasterSheet.getRange('A' + rowID + ':I' + rowID);
-      const values = range.getValues().flat();
-      range.setValues([[
-        values[0],
-        values[1],
-        values[2],
-        values[3],
-        data.text,
-        values[5],
-        data.favorite,
-        data.tags,
-        true
-      ]])
-      response.status = "SUCCESS";
-      break;
+  const response = {};
+  response.status = "SUCCESS"; // TEMP HACK
+  for (var x = 0; x < data.length; x++) {
+    var rowID = -1;
+    for (var i = 0; i < thoughtData.length; i++) {
+      if (data[x].id == thoughtData[i][0]) {
+        rowID = i + 1;
+        const range = thoughtMasterSheet.getRange('A' + rowID + ':K' + rowID);
+        const values = range.getValues().flat();
+        range.setValues([[
+          values[0],
+          values[1],
+          values[2],
+          values[3],
+          data[x].text,
+          values[5],
+          data[x].flagged,
+          data[x].tags,
+          data[x].unread,
+          data[x].notes,
+          data[x].copied
+        ]])
+        break;
+      }
     }
   }
-  Logger.log("response:");
   Logger.log(response);
+  // lock.releaseLock();
   return response;
 }
 
@@ -716,7 +761,7 @@ function getThoughtData(id) {
   for (var i = 0; i < thoughtData.length; i++) {
     if (id == thoughtData[i][0]) {
       response.text = thoughtData[i][4];
-      response.favorite = thoughtData[i][6];
+      response.flagged = thoughtData[i][6];
       response.tags = thoughtData[i][7];
       return response;
     }
@@ -731,14 +776,20 @@ function doGet(e) {
   Logger.log(e);
   const action = e.parameter.action ? decodeURI(e.parameter.action).toString() : "";
   const id = e.parameter.id ? decodeURI(e.parameter.id).toString() : "";
-  if (action && id) {
+  if (action == "edit") {
+    const template = HtmlService.createTemplateFromFile(indexHtmlFilename); 
+    const html = template.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    html.setTitle("Programmable Thoughts - Admin");
+    html.addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return html;
+  } else if (action && id) {
     const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
     const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetThoughtSheetID);
     const thoughtData = thoughtMasterSheet.getDataRange().getValues();
     var message;
     switch(action) {
-    case "favorite": // Mark the Thought in the Master Spreadsheet as a 'Favorite'
-      message = "favorited";
+    case "flag": // Mark the Thought in the Master Spreadsheet as 'Flagged'
+      message = "flagged";
       for (var i = 0; i < thoughtData.length; i++) {
         if (id == thoughtData[i][0]) {
           thoughtMasterSheet.getRange("G" + (i + 1)).setValue("TRUE");
@@ -772,19 +823,187 @@ function doGet(e) {
           return html;
         }
       }
-      break;
-    case "edit":
-      const template = HtmlService.createTemplateFromFile(indexHtmlFilename); 
-      const html = template.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-      html.setTitle("Programmable Thoughts - Edit Thought");
-      html.addMetaTag('viewport', 'width=device-width, initial-scale=1');
-      for (var i = 0; i < thoughtData.length; i++) {
-        if (id == thoughtData[i][0]) {
-          html.append('<div id="thoughtID" style="display:none">' + id + '</div>');
-          break;
-        }
-      }
-      return html;
+      break;      
     }
   }
+}
+
+/*
+ * JSON Exporter Source - https://gist.github.com/jalcantarab/0eb43b13c97e4f784bd0be327f6ced52
+*/
+function getThoughtDataJSON() {
+  const thoughtSpreadsheet = SpreadsheetApp.openById(masterSpreadsheetFileID);
+  const thoughtMasterSheet = getSheetById(thoughtSpreadsheet, masterSpreadsheetThoughtSheetID);
+  return exportJSON(thoughtMasterSheet);
+}
+
+/* 
+ * exportJSON(Spreadsheet) transforms the data in the given sheet to JSON.
+ * @params ss - SpreadsheetApp>Spreaddheet Class.
+ * @returns Object[] - Array of JSON objects.
+*/ 
+function exportJSON(sheet) {
+  var rowsData = getRowsData(sheet);
+  var result = JSON.stringify(rowsData);
+  return result;
+}
+
+/* 
+ * getRowsData(Sheet) iterates row by row in the sheer and returns an array of objects.
+ * Each object contains all the data for a given row, indexed by its normalized column name.
+ * @params sheet - SpreadsheetApp>Sheet Class, the sheet object that contains the data to be processed.
+ * @returns Object[] - an Array of objects with the headers as keys.
+*/ 
+function getRowsData(sheet) {
+  var headersRange = sheet.getRange(1, 1, sheet.getFrozenRows(), sheet.getMaxColumns());
+  var headers = headersRange.getValues()[0];
+  var dataRange = sheet.getRange(sheet.getFrozenRows()+1, 1, sheet.getMaxRows(), sheet.getMaxColumns());
+  return getObjects(dataRange.getValues(), normalizeHeaders(headers));
+}
+
+/* 
+ * getObjects(String[], String[]), For every row in the data, generates an object.  
+ * Names of object fields are defined in keys.
+ * @params data - JavaScript 2d array.
+ * @params keys - Array of Strings that define the property names for the objects to create.
+ * @returns Object[] - JSON, an Array of objects.
+*/ 
+function getObjects(data, keys) {
+  var objects = [];
+  for (var i = 0; i < data.length; ++i) {
+    var object = {};
+    var hasData = false;
+    for (var j = 0; j < data[i].length; ++j) {
+      var cellData = data[i][j];
+      if (isCellEmpty(cellData)) {
+        continue;
+      }
+      object[keys[j]] = cellData;
+      hasData = true;
+    }
+    if (hasData) {
+      objects.push(object);
+    }
+  }
+  return objects;
+}
+
+/* 
+ * getColumnsData(Sheet Object, RangeElement[], int) iterates column by column in the input range and returns an array of objects.
+ * Each object contains all the data for a given column, indexed by its normalized row name.
+ * @params sheet - the sheet object that contains the data to be processed
+ * @params range - the exact range of cells where the data is stored
+ * @params (optional)rowHeadersColumnIndex - specifies the column number where the row names are stored.
+ * @returns Object[] - an Array of objects.
+*/ 
+function getColumnsData(sheet, range, rowHeadersColumnIndex) {
+  rowHeadersColumnIndex = rowHeadersColumnIndex || range.getColumnIndex() - 1;
+  var headersTmp = sheet.getRange(range.getRow(), rowHeadersColumnIndex, range.getNumRows(), 1).getValues();
+  var headers = normalizeHeaders(arrayTranspose(headersTmp)[0]);
+  return getObjects(arrayTranspose(range.getValues()), headers);
+}
+
+/* 
+ * normalizeHeaders(String[]) Returns an Array of normalized Strings.
+ * @params headers - Array of raw headers
+ * @returns String[] - Array of normalized headers.
+*/ 
+function normalizeHeaders(headers) {
+  var keys = [];
+  for (var i = 0; i < headers.length; ++i) {
+    var key = normalizeHeader(headers[i]);
+    if (key.length > 0) {
+      keys.push(key);
+    }
+  }
+  return keys;
+}
+
+/* 
+ * normalizeHeaders(String[]) Normalizes a string by removing all alphanumeric characters 
+ * Uses camelCase to separate words. The output will always start with a lower case letter.
+ * This function is designed to produce JavaScript object property names.
+ * @params headers - Array of raw headers
+ * @returns String[] - Array of normalized headers.
+ * Examples:
+ *   "First Name" -> "firstName"
+ *   "Market Cap (millions) -> "marketCapMillions
+ *   "1 number at the beginning is ignored" -> "numberAtTheBeginningIsIgnored"
+*/ 
+function normalizeHeader(header) {
+  var key = "";
+  var upperCase = false;
+  for (var i = 0; i < header.length; ++i) {
+    var letter = header[i];
+    if (letter == " " && key.length > 0) {
+      upperCase = true;
+      continue;
+    }
+    if (!isAlnum(letter)) {
+      continue;
+    }
+    if (key.length == 0 && isDigit(letter)) {
+      continue; // first character must be a letter
+    }
+    if (upperCase) {
+      upperCase = false;
+      key += letter.toUpperCase();
+    } else {
+      key += letter.toLowerCase();
+    }
+  }
+  return key;
+}
+
+/* 
+ * isCellEmpty(String) Returns true if the cell where cellData was read from is empty.
+ * @params cellData - an SpreadsheetApp Cell Object. 
+ * @returns boolean - false if the string is empty. 
+*/ 
+function isCellEmpty(cellData) {
+  return typeof(cellData) == "string" && cellData == "";
+}
+
+/* 
+ * isAlnum(char) Returns true if the character char is alphabetical, false otherwise.
+ * @params char - a single character.
+ * @returns boolean.
+*/ 
+function isAlnum(char) {
+  return char >= 'A' && char <= 'Z' ||
+    char >= 'a' && char <= 'z' ||
+    isDigit(char);
+}
+
+/* 
+ * isDigit(char) Returns true if the character char is a digit, false otherwise.
+ * @params char - a single character.
+ * @returns boolean.
+*/ 
+function isDigit(char) {
+  return char >= '0' && char <= '9';
+}
+
+/* 
+ * isDigit(String[]) returns the transposed table of given 2d Array.
+ * @params data - JavaScript 2d array.
+ * @returns String[] - transposed 2d array.
+ * Example: 
+ *     arrayTranspose([[1,2,3],[4,5,6]]) returns [[1,4],[2,5],[3,6]]
+*/ 
+function arrayTranspose(data) {
+  if (data.length == 0 || data[0].length == 0) {
+    return null;
+  }
+  var ret = [];
+  for (var i = 0; i < data[0].length; ++i) {
+    ret.push([]);
+  }
+
+  for (var i = 0; i < data.length; ++i) {
+    for (var j = 0; j < data[i].length; ++j) {
+      ret[j][i] = data[i][j];
+    }
+  }
+  return ret;
 }
