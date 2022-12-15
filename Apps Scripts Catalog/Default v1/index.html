@@ -445,6 +445,7 @@
         selectedRowPosition = selectedRowPosition + 1;
         table.selectRow(table.getRowFromPosition(selectedRowPosition));
         updateControls(table.getSelectedRows()[0], true);
+        table.scrollToRow(table.getSelectedRows()[0], "top", true);
       }
 
       function moveToPreviousRow() {
@@ -453,6 +454,7 @@
           selectedRowPosition = selectedRowPosition - 1;
           table.selectRow(table.getRowFromPosition(selectedRowPosition));
           updateControls(table.getSelectedRows()[0], true);
+          table.scrollToRow(table.getSelectedRows()[0], "top", true);
         }
       }
 
