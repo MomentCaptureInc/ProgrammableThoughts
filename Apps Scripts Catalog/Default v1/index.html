@@ -220,7 +220,7 @@
           </div>
           <div class="col-3">
             <div class="form-check">
-              <input class="form-check-input" type="checkbox" value="" id="unread" required>
+              <input class="form-check-input" type="checkbox" value="" id="unread" checked required>
               <label class="form-check-label" for="unread">
                 Unread
               </label>
@@ -516,7 +516,7 @@
           $("#audioPlayer")[0].load();
           audioSrcLoaded = true;
           $("#flagged").prop('checked', rowData.flagged);
-          $("#unread").prop('checked', rowData.unread);
+          if (userInitiated) $("#unread").prop('checked', false);
           $("#copied").prop('checked', rowData.copied);
           if ($("#tags").selectize().selectize) $("#tags").selectize()[0].selectize.destroy();
           $('#tags').val(rowData.tags);
