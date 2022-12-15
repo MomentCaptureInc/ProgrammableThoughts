@@ -696,11 +696,11 @@ function getRecentDocs() {
   return filesArray;
 }
 
-function copyToDoc(id, text, audioUrl) {
+function copyToDoc(id, text, notes, audioUrl) {
   const doc = DocumentApp.openById(id);
   if (!doc) return;
   const docBody = doc.getBody();
-  const docText = docBody.appendListItem(text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);
+  const docText = docBody.appendListItem(text + (notes ? " — " + notes : "") + " — ").setGlyphType(DocumentApp.GlyphType.BULLET);
   const docAudioLink = docText.appendText("Audio").setLinkUrl(audioUrl);
   docAudioLink.merge();
 }

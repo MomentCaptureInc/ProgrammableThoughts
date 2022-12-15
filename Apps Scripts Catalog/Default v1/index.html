@@ -350,7 +350,7 @@
         const data = {};
         data.id = selectedID;
         const index = thoughtDataJSON.findIndex((obj => obj.id == data.id));
-        navigator.clipboard.writeText(thoughtDataJSON[index].text + " " + thoughtDataJSON[index].audio);
+        navigator.clipboard.writeText(thoughtDataJSON[index].text + (thoughtDataJSON[index].notes ? " — " + thoughtDataJSON[index].notes : "") + " — " + thoughtDataJSON[index].audio);
       }
 
       function copyToDoc() {
@@ -365,7 +365,7 @@
         .withFailureHandler((e) => {
           console.log("copyToDoc failure:", e);
         })
-        .copyToDoc(selectedDocID, thoughtDataJSON[index].text, thoughtDataJSON[index].audio);
+        .copyToDoc(selectedDocID, thoughtDataJSON[index].text, thoughtDataJSON[index].notes, thoughtDataJSON[index].audio);
         $("#copied").prop('checked', true);
         queueSaveData();
         selectNewerRow();
