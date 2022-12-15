@@ -516,7 +516,7 @@
           $("#audioPlayer")[0].load();
           audioSrcLoaded = true;
           $("#flagged").prop('checked', rowData.flagged);
-          if (userInitiated) $("#unread").prop('checked', false);
+          $("#unread").prop('checked', false);
           $("#copied").prop('checked', rowData.copied);
           if ($("#tags").selectize().selectize) $("#tags").selectize()[0].selectize.destroy();
           $('#tags').val(rowData.tags);
