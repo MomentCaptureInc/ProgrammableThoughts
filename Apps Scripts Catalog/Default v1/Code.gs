@@ -278,8 +278,8 @@ function process() {
         }
         // const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editURL + " / " : "") + audioUrl + " / " + docUrl + (publishedUrl ? " / " + flagUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
         // const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editLink + " / " : "") +  audioLink + " / " + docLink + (publishedUrl ? " / " + flagLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
-        const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editURL + " / " : "") + audioUrl + (publishedUrl ? " / " + flagUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
-        const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + (indexHtmlTemplate && publishedUrl ? editLink + " / " : "") +  audioLink + (publishedUrl ? " / " + flagLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
+        const displayText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioUrl + (publishedUrl ? " / " + flagUrl + " / " + trashUrl : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskUrl : "");
+        const displayHtmlText = text + (origTags && origTags.length > 0 ? " [" + origTags.join(', ') +"]" : "") + " — " + audioLink + (publishedUrl ? " / " + flagLink + " / " + trashLink : "") + (todoistTestKey && todoistProjectID && publishedUrl ? " / " + taskLink : "");
         const data = [
           thought.getId(),
           filename,
@@ -703,15 +703,6 @@ function copyToDoc(id, text, audioUrl) {
   const docText = docBody.appendListItem(text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);
   const docAudioLink = docText.appendText("Audio").setLinkUrl(audioUrl);
   docAudioLink.merge();
-  // Add the transcribed text and audio link to the tag doc
-  // const tagDocBody = tagDoc.getBody();
-  // const tagText = tagDocBody.insertListItem(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);              
-  // const tagAudioLink = tagText.appendText("Audio").setLinkUrl(audioUrl);
-  // tagAudioLink.merge();
-  // const tagSeparator = tagText.appendText(" / ").setLinkUrl("");
-  // tagSeparator.merge();
-  // const tagDocLink = tagText.appendText("Doc").setLinkUrl(docUrl);
-  // tagDocLink.merge();
 }
 
 function saveThoughtsData(data) {
