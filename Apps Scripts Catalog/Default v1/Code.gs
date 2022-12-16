@@ -866,9 +866,9 @@ function getObjects(data, keys) {
     var hasData = false;
     for (var j = 0; j < data[i].length; ++j) {
       var cellData = data[i][j];
-      if (isCellEmpty(cellData)) {
-        continue;
-      }
+      // if (isCellEmpty(cellData)) { // This breaks Tabulator reactive data support
+      //   continue;
+      // }
       object[keys[j]] = cellData;
       hasData = true;
     }
