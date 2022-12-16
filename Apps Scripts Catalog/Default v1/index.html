@@ -213,7 +213,7 @@
             <!-- <label for="recentDocs" class="form-label">Recent Docs</label> -->
           </div>
           <div class="col-1">
-            <button type="button" class="btn btn-secondary" id="copyToDoc">💾</button>
+            <button type="button" class="btn btn-secondary" id="copyToDoc" disabled>💾</button>
           </div>
           <div class="col-1">
             <button type="button" class="btn btn-secondary" id="copyToClipboard">📋</button>
@@ -343,8 +343,18 @@
       document.getElementById("flagged").addEventListener("change", queueSaveData);
       document.getElementById("copied").addEventListener("change", queueSaveData);
       document.getElementById("unread").addEventListener("change", queueSaveData);
+      document.getElementById("recentDocs").addEventListener("change", recentDocSelected);
       document.getElementById("copyToDoc").addEventListener("click", copyToDoc);
       document.getElementById("copyToClipboard").addEventListener("click", copyToClipboard);
+
+      function recentDocSelected() {
+        if ($('#recentDocs').find(":selected").val()) {
+          $("#copyToDoc").prop('disabled', false);
+        } else {
+          $("#copyToDoc").prop('disabled', true);
+        }
+        
+      }
 
       function copyToClipboard() {
         const data = {};
@@ -368,7 +378,7 @@
         .copyToDoc(selectedDocID, thoughtDataJSON[index].text, thoughtDataJSON[index].notes, thoughtDataJSON[index].audio);
         $("#copied").prop('checked', true);
         queueSaveData();
-        selectNewerRow();
+        if (!audioIsPlaying) selectNewerRow();
       }
 
       window.onbeforeunload = function() {
