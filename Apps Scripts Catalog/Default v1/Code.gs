@@ -227,7 +227,7 @@ function process() {
         const origTags = processTagsResponse.origTags;
         if (text) {
           // const docBody = doc.getBody(); // Add the transcribed text (if available) to the Google Doc
-          // const docText = docBody.insertParagraph(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ");
+          // const docText = docBody.insertParagraph(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US').replace(/\s/g, " ") + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US').replace(/\s/g, " ") + ": " + text + " - ");
           // const docAudioLink = docText.appendText("Audio").setLinkUrl(audioUrl);
           // docAudioLink.merge();
           if (origTags && origTags.length > 0) {
@@ -266,7 +266,7 @@ function process() {
               }
               // Add the transcribed text and audio link to the tag doc
               // const tagDocBody = tagDoc.getBody();
-              // const tagText = tagDocBody.insertListItem(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US') + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US') + ": " + text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);              
+              // const tagText = tagDocBody.insertListItem(0, thoughtDateCreatedDateObject.toLocaleDateString('en-US').replace(/\s/g, " ") + " " + thoughtDateCreatedDateObject.toLocaleTimeString('en-US').replace(/\s/g, " ") + ": " + text + " - ").setGlyphType(DocumentApp.GlyphType.BULLET);              
               // const tagAudioLink = tagText.appendText("Audio").setLinkUrl(audioUrl);
               // tagAudioLink.merge();
               // const tagSeparator = tagText.appendText(" / ").setLinkUrl("");
@@ -308,7 +308,7 @@ function process() {
         const tailHtmlmessage = "<br><br><br><br><br>" + thoughtAdminLink;
         body = displayText + tailMessage;
         htmlBody = displayHtmlText + tailHtmlmessage;
-        const subject = (emailSubjectModifiers && emailSubjectModifiers.length > 0 ? emailSubjectModifiers.join(' / ') + " - " : "") + "Thought " + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'});
+        const subject = (emailSubjectModifiers && emailSubjectModifiers.length > 0 ? emailSubjectModifiers.join(' / ') + " - " : "") + "Thought " + paddedMonth(thoughtDateCreatedDateObject) + '/' + paddedDate(thoughtDateCreatedDateObject) + '/' + thoughtDateCreatedDateObject.getFullYear() + ' ' + thoughtDateCreatedDateObject.toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles', hour12: true, hour: 'numeric', minute: '2-digit'}).replace(/\s/g, " ");
         // Send the Google Account an email containing the transcribed text and attached audio file
         if ((emailSubjectModifiers.includes("Task Added") && pushKey == "") || !emailSubjectModifiers.includes("Task Added")) { // Send a push notification rather than email when tasks are added successfully
           GmailApp.sendEmail(Session.getActiveUser().getEmail(), subject, body, {
