@@ -998,3 +998,13 @@ function arrayTranspose(data) {
   }
   return ret;
 }
+
+function getBlobInBase64(fileId) {
+  var file = DriveApp.getFileById(fileId);
+  var blob = file.getBlob();
+  return {
+    file_name: file.getName(),
+    mime: file.getMimeType(),
+    b64: Utilities.base64Encode(blob.getBytes())
+  }
+}
