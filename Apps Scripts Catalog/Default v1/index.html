@@ -520,13 +520,21 @@
         audioIsPlaying = false;
         const rowData = row.getData();
         if (rowData.id) {
+          $("#audioSource").attr("src", "");
+          $("#audioPlayer")[0].load();
           selectedID = rowData.id;
           selectedRowPosition = table.getRowPosition(row);
           if (rowData.text) $('#text').val(rowData.text.split(' (')[0]);
           $('#notes').val(rowData.notes);
-          $("#audioSource").attr("src", "https://drive.google.com/uc?export=download&id=" + rowData.id);
-          $("#audioPlayer")[0].load();
-          audioSrcLoaded = true;
+          google.script.run.withSuccessHandler((data) => { // Using blob workaround due to https://issuetracker.google.com/issues/319531488
+            var uri = 'data:' + data.mime + ';charset=ISO-8859-1;base64,' + encodeURIComponent(data.b64);
+            $("#audioSource").attr("src", uri);
+            $("#audioPlayer")[0].load();
+            audioSrcLoaded = true;
+            if (userInitiated) audioPlayer.play();
+          }).withFailureHandler((err) => {
+            console.log(err);
+          }).getBlobInBase64(rowData.id);
           $("#flagged").prop('checked', rowData.flagged);
           $("#unread").prop('checked', false);
           $("#copied").prop('checked', rowData.copied);
@@ -544,7 +552,6 @@
             onChange: queueSaveData
           });
           queueSaveData();
-          if (userInitiated) audioPlayer.play();
         }
       }
     })
