@@ -511,9 +511,9 @@ function addTask(task, priority, audioUrl) {
   task = task.split('(')[0]; // Remove confidence text
   if (!task) return;
   Logger.log("Adding task: " + task);
-  const url = taskIntegrationProvider == 1 ? "https://api.todoist.com/rest/v1/tasks" : taskIntegrationProvider == 2 ? "https://api.notion.com/v1/blocks/" + notionPageID + "/children" : "https://api.airtable.com/v0/" + airtableBaseID + "/" + airtableTaskEndpoint;
+  const url = taskIntegrationProvider == 1 ? "https://api.todoist.com/rest/v2/tasks" : taskIntegrationProvider == 2 ? "https://api.notion.com/v1/blocks/" + notionPageID + "/children" : "https://api.airtable.com/v0/" + airtableBaseID + "/" + airtableTaskEndpoint;
   var data = {};
-  if (taskIntegrationProvider == 1) { // https://developer.todoist.com/rest/v1/#create-a-new-task
+  if (taskIntegrationProvider == 1) { // https://developer.todoist.com/rest/v2/#create-a-new-task
     data = {
       'content': task,
       'description': audioUrl,
